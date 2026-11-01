@@ -9,12 +9,12 @@ kotlin {
 
 android {
     namespace = "com.shancodex.downloader"
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.shancodex.downloader"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "0.1"
     }
