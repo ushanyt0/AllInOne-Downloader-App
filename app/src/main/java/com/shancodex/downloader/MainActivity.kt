@@ -1,16 +1,26 @@
 package com.shancodex.downloader
 
 import android.app.Activity
+import android.graphics.Color
 import android.os.Bundle
-import android.widget.TextView
+import android.webkit.WebView
 
 class MainActivity : Activity() {
+    private lateinit var web: WebView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val tv = TextView(this)
-        tv.text = "All-in-One Downloader\nPowered by Shan codex"
-        tv.textSize = 22f
-        tv.setPadding(48, 200, 48, 48)
-        setContentView(tv)
+        window.statusBarColor = Color.parseColor("#0b0f1a")
+        window.navigationBarColor = Color.parseColor("#0b0f1a")
+        web = WebView(this)
+        web.setBackgroundColor(Color.parseColor("#0b0f1a"))
+        web.settings.javaScriptEnabled = true
+        web.settings.domStorageEnabled = true
+        setContentView(web)
+        web.loadUrl("file:///android_asset/index.html")
+    }
+
+    override fun onBackPressed() {
+        if (web.canGoBack()) web.goBack() else super.onBackPressed()
     }
 }
