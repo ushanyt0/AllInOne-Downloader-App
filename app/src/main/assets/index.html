@@ -1,0 +1,197 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>All-in-One Downloader</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;color:#e8ecf4;background:radial-gradient(900px 500px at 0% -10%,#4c1d9566,transparent),radial-gradient(800px 500px at 100% 0%,#0e749066,transparent),#0b0f1a;padding:20px 16px}
+.wrap{width:100%;max-width:460px;margin:0 auto}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.logo i{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:18px}
+.card{background:#ffffff0d;border:1px solid #ffffff1f;border-radius:20px;padding:18px}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:#9aa4b8;margin:0 0 14px;font-size:14px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px}
+.tab{flex:0 0 auto;padding:8px 14px;border-radius:999px;border:1px solid #ffffff22;background:#ffffff0f;color:#cfd6e6;font-size:13px;font-weight:600;white-space:nowrap}
+.tab.on{background:linear-gradient(135deg,#8b5cf6,#06b6d4);color:#fff;border-color:transparent}
+input[type=text],select{width:100%;padding:13px 14px;margin:6px 0;border-radius:12px;border:1px solid #ffffff22;background:#0b0f1acc;color:#e8ecf4;font-size:16px}
+#lang{width:auto;padding:8px 12px;margin:0;font-size:14px;border-radius:10px}
+.seg{display:flex;background:#0b0f1acc;border:1px solid #ffffff22;border-radius:12px;padding:4px;margin:6px 0}
+.seg button{flex:1;padding:10px;border:0;border-radius:9px;background:transparent;color:#9aa4b8;font-size:15px;font-weight:600}
+.seg button.on{background:linear-gradient(135deg,#8b5cf6,#06b6d4);color:#fff}
+label.c{display:flex;align-items:center;gap:10px;margin:10px 2px;color:#cfd6e6;font-size:15px}
+label.c input{width:18px;height:18px;margin:0}
+.go{width:100%;padding:14px;margin-top:8px;border:0;border-radius:12px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);color:#fff;font-size:17px;font-weight:700}
+.bar{height:10px;border-radius:999px;background:#ffffff1a;overflow:hidden;margin-top:16px}
+#fill{height:100%;width:0%;background:linear-gradient(90deg,#8b5cf6,#06b6d4);transition:width .3s}
+#msg{margin-top:10px;font-size:14px;color:#cfd6e6;word-break:break-word}
+.note{color:#7d879b;font-size:12px;text-align:center;margin-top:14px}
+.foot{margin-top:22px;text-align:center;color:#7d879b;font-size:12px}
+.foot b{color:#c4b5fd}
+#splash{position:fixed;inset:0;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(700px 500px at 50% 30%,#4c1d9588,transparent),radial-gradient(600px 500px at 50% 80%,#0e749077,transparent),#0b0f1a;animation:out .6s ease 3s forwards}
+#sicon{width:140px;height:140px;border-radius:32px;animation:pop .9s ease both,glow 2s ease-in-out .9s infinite}
+.st{font-size:28px;margin:26px 0 0;text-align:center;animation:up .7s ease .6s both}
+.st span{background:linear-gradient(90deg,#fbbf24,#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sp{margin-top:14px;color:#9aa4b8;font-size:14px;letter-spacing:1px;animation:up .7s ease 1.2s both}
+.sp b{color:#22d3ee}
+@keyframes pop{0%{transform:scale(.3) rotate(-12deg);opacity:0}60%{transform:scale(1.1) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes glow{0%,100%{box-shadow:0 0 30px #06b6d466}50%{box-shadow:0 0 70px #8b5cf6aa}}
+@keyframes up{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes out{to{opacity:0;visibility:hidden}}
+</style></head><body>
+<div id="splash">
+<img id="sicon" src="file:///android_res/mipmap/ic_launcher.png" onerror="this.style.display='none'">
+<h1 class="st">All in One <span>Downloader</span></h1>
+<div class="sp">Powered by <b>Shan codex</b></div>
+</div>
+<div class="wrap">
+<div class="top">
+<div class="logo"><i>⬇</i><span>All-in-One</span></div>
+<select id="lang" onchange="setLang(this.value)">
+<option value="en">English</option>
+<option value="si">සිංහල</option>
+<option value="ta">தமிழ்</option>
+<option value="hi">हिन्दी</option>
+</select>
+</div>
+<div class="card">
+<h1>All-in-One Downloader</h1>
+<p class="sub" data-k="sub"></p>
+<div class="tabs">
+<button class="tab on" id="p_auto" onclick="setPlat('auto')" data-k="auto"></button>
+<button class="tab" id="p_youtube" onclick="setPlat('youtube')">YouTube</button>
+<button class="tab" id="p_facebook" onclick="setPlat('facebook')">Facebook</button>
+<button class="tab" id="p_instagram" onclick="setPlat('instagram')">Instagram</button>
+<button class="tab" id="p_tiktok" onclick="setPlat('tiktok')">TikTok</button>
+</div>
+<input type="text" id="url" inputmode="url" onfocus="this.select()" value="https://youtu.be/gwov8azLd2Q?si=0O47vcjsMwJBmP9_">
+<div class="seg">
+<button id="m_video" onclick="setMode('video')" data-k="video"></button>
+<button id="m_audio" onclick="setMode('audio')" data-k="audio"></button>
+</div>
+<select id="quality"></select>
+<div id="yt_only">
+<label class="c"><input type="checkbox" id="playlist"><span data-k="playlist"></span></label>
+<label class="c"><input type="checkbox" id="subs"><span data-k="subs"></span></label>
+</div>
+<button class="go" onclick="go()" data-k="go"></button>
+<div class="bar"><div id="fill"></div></div>
+<div id="msg"></div>
+<div class="note" data-k="note"></div>
+</div>
+<div class="foot">Powered by <b>Shan codex</b></div>
+</div>
+<script>
+var L={
+en:{sub:"Pick a platform, paste a link, choose the quality.",auto:"All sites",note:"Only download content you have the right to.",video:"Video",audio:"Audio (MP3)",best:"Best available",high:"High",med:"Medium",low:"Low",playlist:"Download whole playlist",subs:"Subtitles (English)",go:"Download",ready:"Ready",starting:"Starting...",downloading:"Downloading...",processing:"Processing...",done:"Done! Check your Download folder",error:"Error",busy:"A download is already running",empty:"Please paste a valid link",wrongsite:"This link doesn't match the selected platform",nobridge:"Download engine is not connected yet (next step)"},
+si:{sub:"Platform එක තෝරන්න, link එක දාන්න, quality එක තෝරන්න.",auto:"සියලුම sites",note:"ඔයාට අයිතිය තියෙන content විතරක් download කරන්න.",video:"Video",audio:"Audio (MP3)",best:"ලබාගත හැකි හොඳම",high:"ඉහළ",med:"මධ්‍යම",low:"අඩු",playlist:"Playlist එක සම්පූර්ණයෙන්ම",subs:"Subtitles (English)",go:"Download කරන්න",ready:"සූදානම්",starting:"පටන් ගන්නවා...",downloading:"Download වෙනවා...",processing:"සකස් කරනවා...",done:"ඉවරයි! Download folder එක බලන්න",error:"Error",busy:"දැනටමත් download එකක් යනවා",empty:"හරි link එකක් දාන්න",wrongsite:"මේ link එක තෝරපු platform එකට ගැලපෙන්නේ නෑ",nobridge:"Download engine එක තාම සම්බන්ධ කරලා නෑ (ඊළඟ පියවරේදී)"},
+ta:{sub:"தளத்தைத் தேர்ந்தெடுத்து, இணைப்பை ஒட்டி, தரத்தைத் தேர்ந்தெடுக்கவும்.",auto:"அனைத்தும்",note:"உங்களுக்கு உரிமை உள்ள உள்ளடக்கத்தை மட்டும் பதிவிறக்கவும்.",video:"வீடியோ",audio:"ஆடியோ (MP3)",best:"கிடைக்கும் சிறந்தது",high:"உயர்",med:"நடுத்தரம்",low:"குறைவு",playlist:"முழு பிளேலிஸ்ட்டையும் பதிவிறக்கு",subs:"வசனங்கள் (English)",go:"பதிவிறக்கு",ready:"தயார்",starting:"தொடங்குகிறது...",downloading:"பதிவிறக்கப்படுகிறது...",processing:"செயலாக்கப்படுகிறது...",done:"முடிந்தது! Download folder-ஐப் பாருங்கள்",error:"பிழை",busy:"ஒரு பதிவிறக்கம் ஏற்கனவே நடக்கிறது",empty:"சரியான இணைப்பை ஒட்டவும்",wrongsite:"இந்த இணைப்பு தேர்ந்தெடுத்த தளத்துடன் பொருந்தவில்லை",nobridge:"பதிவிறக்க இயந்திரம் இன்னும் இணைக்கப்படவில்லை (அடுத்த படியில்)"},
+hi:{sub:"प्लेटफ़ॉर्म चुनें, लिंक पेस्ट करें और क्वालिटी चुनें।",auto:"सभी साइट",note:"केवल वही कंटेंट डाउनलोड करें जिसका आपको अधिकार है।",video:"वीडियो",audio:"ऑडियो (MP3)",best:"सबसे अच्छी उपलब्ध",high:"उच्च",med:"मध्यम",low:"कम",playlist:"पूरी प्लेलिस्ट डाउनलोड करें",subs:"सबटाइटल (English)",go:"डाउनलोड करें",ready:"तैयार",starting:"शुरू हो रहा है...",downloading:"डाउनलोड हो रहा है...",processing:"प्रोसेस हो रहा है...",done:"हो गया! Download folder देखें",error:"त्रुटि",busy:"एक डाउनलोड पहले से चल रहा है",empty:"सही लिंक पेस्ट करें",wrongsite:"यह लिंक चुने हुए प्लेटफ़ॉर्म से मेल नहीं खाता",nobridge:"डाउनलोड इंजन अभी जुड़ा नहीं है (अगले चरण में)"}
+};
+var EXAMPLE="https://youtu.be/gwov8azLd2Q?si=0O47vcjsMwJBmP9_";
+var P={auto:[],youtube:["youtube.com","youtu.be"],facebook:["facebook.com","fb.watch","fb.com"],instagram:["instagram.com","instagr.am"],tiktok:["tiktok.com"]};
+var H={auto:"https://...",youtube:"https://youtu.be/...",facebook:"https://www.facebook.com/.../videos/...",instagram:"https://www.instagram.com/reel/...",tiktok:"https://www.tiktok.com/@user/video/..."};
+var lang="si";
+try{lang=localStorage.getItem("lang")||"si";}catch(e){}
+if(!L[lang]){lang="si";}
+var mode="video";
+var plat="auto";
+var last={code:"ready",percent:0,status:"idle",detail:""};
+var timer=null;
+function fill(){
+  var t=L[lang];
+  var q=document.getElementById("quality");
+  var old=q.value;
+  var list=(mode==="video")
+    ?[["1080","1080p"],["720","720p"],["480","480p"],["360","360p"],["best",t.best]]
+    :[["320",t.high+" (320k)"],["192",t.med+" (192k)"],["128",t.low+" (128k)"]];
+  q.innerHTML="";
+  list.forEach(function(o){
+    q.innerHTML+='<option value="'+o[0]+'">'+o[1]+'</option>';
+  });
+  for(var i=0;i<q.options.length;i++){
+    if(q.options[i].value===old){q.value=old;}
+  }
+}
+function setMode(m){
+  mode=m;
+  document.getElementById("m_video").className=(m==="video")?"on":"";
+  document.getElementById("m_audio").className=(m==="audio")?"on":"";
+  fill();
+}
+function setPlat(p){
+  plat=p;
+  var ids=["auto","youtube","facebook","instagram","tiktok"];
+  for(var i=0;i<ids.length;i++){
+    document.getElementById("p_"+ids[i]).className=(ids[i]===p)?"tab on":"tab";
+  }
+  var u=document.getElementById("url");
+  u.placeholder=H[p];
+  if(p!=="auto"&&p!=="youtube"&&u.value===EXAMPLE){u.value="";}
+  document.getElementById("yt_only").style.display=(p==="auto"||p==="youtube")?"block":"none";
+}
+function show(s){
+  last=s;
+  var t=L[lang];
+  var m=t[s.code]||"";
+  if(s.detail){m+=": "+s.detail;}
+  if(s.status==="running"||s.status==="done"){m+=" ("+s.percent+"%)";}
+  document.getElementById("fill").style.width=s.percent+"%";
+  document.getElementById("msg").innerText=m;
+}
+function apply(){
+  var t=L[lang];
+  var els=document.querySelectorAll("[data-k]");
+  for(var i=0;i<els.length;i++){
+    els[i].textContent=t[els[i].getAttribute("data-k")];
+  }
+  setMode(mode);
+  show(last);
+}
+function setLang(v){
+  lang=v;
+  try{localStorage.setItem("lang",v);}catch(e){}
+  apply();
+}
+document.getElementById("lang").value=lang;
+apply();
+setPlat("auto");
+function go(){
+  var u=document.getElementById("url").value.trim();
+  var low=u.toLowerCase();
+  if(low.indexOf("http://")!==0&&low.indexOf("https://")!==0){
+    show({code:"empty",percent:0,status:"idle",detail:""});
+    return;
+  }
+  var dom=P[plat];
+  if(dom.length>0){
+    var ok=false;
+    for(var i=0;i<dom.length;i++){
+      if(low.indexOf(dom[i])>-1){ok=true;}
+    }
+    if(!ok){
+      show({code:"wrongsite",percent:0,status:"idle",detail:""});
+      return;
+    }
+  }
+  if(!window.Android){
+    show({code:"nobridge",percent:0,status:"idle",detail:""});
+    return;
+  }
+  var yt=(plat==="auto"||plat==="youtube");
+  Android.start(JSON.stringify({
+    url:u,
+    mode:mode,
+    quality:document.getElementById("quality").value,
+    playlist:yt&&document.getElementById("playlist").checked,
+    subs:yt&&document.getElementById("subs").checked}));
+  clearInterval(timer);
+  timer=setInterval(poll,1000);
+}
+function poll(){
+  var s=JSON.parse(Android.progress());
+  show(s);
+  if(s.status!=="running"){clearInterval(timer);}
+}
+</script></body></html>
