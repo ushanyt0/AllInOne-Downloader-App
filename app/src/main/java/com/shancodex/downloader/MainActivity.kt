@@ -24,6 +24,7 @@ class MainActivity : Activity() {
     @Volatile private var detail = ""
     @Volatile private var ready = false
     @Volatile private var initError: String? = null
+    @Volatile private var updateError = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,11 +41,33 @@ class MainActivity : Activity() {
             try {
                 YoutubeDL.getInstance().init(applicationContext)
                 FFmpeg.getInstance().init(applicationContext)
+                updateEngine()
                 ready = true
             } catch (e: Throwable) {
                 initError = e.message ?: e.toString()
             }
         }.start()
+    }
+
+    private fun updateEngine() {
+        try {
+            val prefs = getSharedPreferences("engine", MODE_PRIVATE)
+            val now = System.currentTimeMillis()
+            if (now - prefs.getLong("last_update", 0L) > 6 * 60 * 60 * 1000L) {
+                YoutubeDL.getInstance().updateYoutubeDL(applicationContext, YoutubeDL.UpdateChannel.NIGHTLY)
+                prefs.edit().putLong("last_update", now).apply()
+            }
+        } catch (e: Throwable) {
+            updateError = e.message ?: e.toString()
+        }
+    }
+
+    private fun engineVersion(): String {
+        return try {
+            YoutubeDL.getInstance().versionName(applicationContext) ?: "?"
+        } catch (e: Throwable) {
+            "?"
+        }
     }
 
     inner class Bridge {
@@ -131,7 +154,10 @@ class MainActivity : Activity() {
         } catch (e: Throwable) {
             status = "error"
             code = "error"
-            detail = (e.message ?: e.toString()).takeLast(300)
+            var extra = "  [yt-dlp " + engineVersion()
+            if (updateError.isNotEmpty()) extra += "; update failed: " + updateError.take(80)
+            extra += "]"
+            detail = (e.message ?: e.toString()).takeLast(300) + extra
         }
     }
 
