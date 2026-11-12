@@ -26,6 +26,10 @@ label.c input{width:18px;height:18px;margin:0}
 .bar{height:10px;border-radius:999px;background:#ffffff1a;overflow:hidden;margin-top:16px}
 #fill{height:100%;width:0%;background:linear-gradient(90deg,#8b5cf6,#06b6d4);transition:width .3s}
 #msg{margin-top:10px;font-size:14px;color:#cfd6e6;word-break:break-word}
+.stats{display:flex;gap:8px;margin-top:12px}
+.stat{flex:1;background:#0b0f1acc;border:1px solid #ffffff1a;border-radius:12px;padding:8px 4px;text-align:center;font-size:11px;color:#9aa4b8}
+.stat b{display:block;color:#e8ecf4;font-size:14px;margin-top:3px;min-height:18px}
+.log{margin-top:8px;font-size:11px;color:#7d879b;word-break:break-all;min-height:14px;font-family:monospace}
 .note{color:#7d879b;font-size:12px;text-align:center;margin-top:14px}
 .foot{margin-top:22px;text-align:center;color:#7d879b;font-size:12px}
 .foot b{color:#c4b5fd}
@@ -78,16 +82,22 @@ label.c input{width:18px;height:18px;margin:0}
 <button class="go" onclick="go()" data-k="go"></button>
 <div class="bar"><div id="fill"></div></div>
 <div id="msg"></div>
+<div class="stats">
+<div class="stat"><span data-k="spdL"></span><b id="s_spd">-</b></div>
+<div class="stat"><span data-k="etaL"></span><b id="s_eta">-</b></div>
+<div class="stat"><span data-k="sizeL"></span><b id="s_size">-</b></div>
+</div>
+<div class="log" id="log"></div>
 <div class="note" data-k="note"></div>
 </div>
 <div class="foot">Powered by <b>Shan codex</b></div>
 </div>
 <script>
 var L={
-en:{sub:"Pick a platform, paste a link, choose the quality.",auto:"All sites",note:"Only download content you have the right to.",video:"Video",audio:"Audio (MP3)",best:"Best available",high:"High",med:"Medium",low:"Low",playlist:"Download whole playlist",subs:"Subtitles (English)",go:"Download",ready:"Ready",starting:"Starting...",downloading:"Downloading...",processing:"Processing...",done:"Done! Check your Download folder",error:"Error",busy:"A download is already running",empty:"Please paste a valid link",wrongsite:"This link doesn't match the selected platform",nobridge:"Download engine is not connected yet (next step)"},
-si:{sub:"Platform එක තෝරන්න, link එක දාන්න, quality එක තෝරන්න.",auto:"සියලුම sites",note:"ඔයාට අයිතිය තියෙන content විතරක් download කරන්න.",video:"Video",audio:"Audio (MP3)",best:"ලබාගත හැකි හොඳම",high:"ඉහළ",med:"මධ්‍යම",low:"අඩු",playlist:"Playlist එක සම්පූර්ණයෙන්ම",subs:"Subtitles (English)",go:"Download කරන්න",ready:"සූදානම්",starting:"පටන් ගන්නවා...",downloading:"Download වෙනවා...",processing:"සකස් කරනවා...",done:"ඉවරයි! Download folder එක බලන්න",error:"Error",busy:"දැනටමත් download එකක් යනවා",empty:"හරි link එකක් දාන්න",wrongsite:"මේ link එක තෝරපු platform එකට ගැලපෙන්නේ නෑ",nobridge:"Download engine එක තාම සම්බන්ධ කරලා නෑ (ඊළඟ පියවරේදී)"},
-ta:{sub:"தளத்தைத் தேர்ந்தெடுத்து, இணைப்பை ஒட்டி, தரத்தைத் தேர்ந்தெடுக்கவும்.",auto:"அனைத்தும்",note:"உங்களுக்கு உரிமை உள்ள உள்ளடக்கத்தை மட்டும் பதிவிறக்கவும்.",video:"வீடியோ",audio:"ஆடியோ (MP3)",best:"கிடைக்கும் சிறந்தது",high:"உயர்",med:"நடுத்தரம்",low:"குறைவு",playlist:"முழு பிளேலிஸ்ட்டையும் பதிவிறக்கு",subs:"வசனங்கள் (English)",go:"பதிவிறக்கு",ready:"தயார்",starting:"தொடங்குகிறது...",downloading:"பதிவிறக்கப்படுகிறது...",processing:"செயலாக்கப்படுகிறது...",done:"முடிந்தது! Download folder-ஐப் பாருங்கள்",error:"பிழை",busy:"ஒரு பதிவிறக்கம் ஏற்கனவே நடக்கிறது",empty:"சரியான இணைப்பை ஒட்டவும்",wrongsite:"இந்த இணைப்பு தேர்ந்தெடுத்த தளத்துடன் பொருந்தவில்லை",nobridge:"பதிவிறக்க இயந்திரம் இன்னும் இணைக்கப்படவில்லை (அடுத்த படியில்)"},
-hi:{sub:"प्लेटफ़ॉर्म चुनें, लिंक पेस्ट करें और क्वालिटी चुनें।",auto:"सभी साइट",note:"केवल वही कंटेंट डाउनलोड करें जिसका आपको अधिकार है।",video:"वीडियो",audio:"ऑडियो (MP3)",best:"सबसे अच्छी उपलब्ध",high:"उच्च",med:"मध्यम",low:"कम",playlist:"पूरी प्लेलिस्ट डाउनलोड करें",subs:"सबटाइटल (English)",go:"डाउनलोड करें",ready:"तैयार",starting:"शुरू हो रहा है...",downloading:"डाउनलोड हो रहा है...",processing:"प्रोसेस हो रहा है...",done:"हो गया! Download folder देखें",error:"त्रुटि",busy:"एक डाउनलोड पहले से चल रहा है",empty:"सही लिंक पेस्ट करें",wrongsite:"यह लिंक चुने हुए प्लेटफ़ॉर्म से मेल नहीं खाता",nobridge:"डाउनलोड इंजन अभी जुड़ा नहीं है (अगले चरण में)"}
+en:{sub:"Pick a platform, paste a link, choose the quality.",auto:"All sites",note:"Only download content you have the right to.",video:"Video",audio:"Audio (MP3)",best:"Best available",high:"High",med:"Medium",low:"Low",playlist:"Download whole playlist",subs:"Subtitles (English)",go:"Download",spdL:"Speed",etaL:"Time left",sizeL:"Size",ready:"Ready",starting:"Starting...",downloading:"Downloading...",processing:"Processing...",done:"Done! Check your Download folder",error:"Error",busy:"A download is already running",empty:"Please paste a valid link",wrongsite:"This link doesn't match the selected platform",nobridge:"Download engine is not connected"},
+si:{sub:"Platform එක තෝරන්න, link එක දාන්න, quality එක තෝරන්න.",auto:"සියලුම sites",note:"ඔයාට අයිතිය තියෙන content විතරක් download කරන්න.",video:"Video",audio:"Audio (MP3)",best:"ලබාගත හැකි හොඳම",high:"ඉහළ",med:"මධ්‍යම",low:"අඩු",playlist:"Playlist එක සම්පූර්ණයෙන්ම",subs:"Subtitles (English)",go:"Download කරන්න",spdL:"වේගය",etaL:"ඉතුරු කාලය",sizeL:"ප්‍රමාණය",ready:"සූදානම්",starting:"පටන් ගන්නවා...",downloading:"Download වෙනවා...",processing:"සකස් කරනවා...",done:"ඉවරයි! Download folder එක බලන්න",error:"Error",busy:"දැනටමත් download එකක් යනවා",empty:"හරි link එකක් දාන්න",wrongsite:"මේ link එක තෝරපු platform එකට ගැලපෙන්නේ නෑ",nobridge:"Download engine එක සම්බන්ධ නෑ"},
+ta:{sub:"தளத்தைத் தேர்ந்தெடுத்து, இணைப்பை ஒட்டி, தரத்தைத் தேர்ந்தெடுக்கவும்.",auto:"அனைத்தும்",note:"உங்களுக்கு உரிமை உள்ள உள்ளடக்கத்தை மட்டும் பதிவிறக்கவும்.",video:"வீடியோ",audio:"ஆடியோ (MP3)",best:"கிடைக்கும் சிறந்தது",high:"உயர்",med:"நடுத்தரம்",low:"குறைவு",playlist:"முழு பிளேலிஸ்ட்டையும் பதிவிறக்கு",subs:"வசனங்கள் (English)",go:"பதிவிறக்கு",spdL:"வேகம்",etaL:"மீதமுள்ள நேரம்",sizeL:"அளவு",ready:"தயார்",starting:"தொடங்குகிறது...",downloading:"பதிவிறக்கப்படுகிறது...",processing:"செயலாக்கப்படுகிறது...",done:"முடிந்தது! Download folder-ஐப் பாருங்கள்",error:"பிழை",busy:"ஒரு பதிவிறக்கம் ஏற்கனவே நடக்கிறது",empty:"சரியான இணைப்பை ஒட்டவும்",wrongsite:"இந்த இணைப்பு தேர்ந்தெடுத்த தளத்துடன் பொருந்தவில்லை",nobridge:"பதிவிறக்க இயந்திரம் இணைக்கப்படவில்லை"},
+hi:{sub:"प्लेटफ़ॉर्म चुनें, लिंक पेस्ट करें और क्वालिटी चुनें।",auto:"सभी साइट",note:"केवल वही कंटेंट डाउनलोड करें जिसका आपको अधिकार है।",video:"वीडियो",audio:"ऑडियो (MP3)",best:"सबसे अच्छी उपलब्ध",high:"उच्च",med:"मध्यम",low:"कम",playlist:"पूरी प्लेलिस्ट डाउनलोड करें",subs:"सबटाइटल (English)",go:"डाउनलोड करें",spdL:"गति",etaL:"बचा समय",sizeL:"आकार",ready:"तैयार",starting:"शुरू हो रहा है...",downloading:"डाउनलोड हो रहा है...",processing:"प्रोसेस हो रहा है...",done:"हो गया! Download folder देखें",error:"त्रुटि",busy:"एक डाउनलोड पहले से चल रहा है",empty:"सही लिंक पेस्ट करें",wrongsite:"यह लिंक चुने हुए प्लेटफ़ॉर्म से मेल नहीं खाता",nobridge:"डाउनलोड इंजन जुड़ा नहीं है"}
 };
 var EXAMPLE="https://youtu.be/gwov8azLd2Q?si=0O47vcjsMwJBmP9_";
 var P={auto:[],youtube:["youtube.com","youtu.be"],facebook:["facebook.com","fb.watch","fb.com"],instagram:["instagram.com","instagr.am"],tiktok:["tiktok.com"]};
@@ -139,6 +149,10 @@ function show(s){
   if(s.status==="running"||s.status==="done"){m+=" ("+s.percent+"%)";}
   document.getElementById("fill").style.width=s.percent+"%";
   document.getElementById("msg").innerText=m;
+  document.getElementById("s_spd").innerText=s.speed||"-";
+  document.getElementById("s_eta").innerText=s.eta||"-";
+  document.getElementById("s_size").innerText=s.size||"-";
+  document.getElementById("log").innerText=s.log||"";
 }
 function apply(){
   var t=L[lang];
