@@ -22,9 +22,16 @@ class MainActivity : Activity() {
     @Volatile private var percent = 0
     @Volatile private var code = "ready"
     @Volatile private var detail = ""
+    @Volatile private var spd = ""
+    @Volatile private var etaTxt = ""
+    @Volatile private var sizeTxt = ""
+    @Volatile private var logLine = ""
     @Volatile private var ready = false
     @Volatile private var initError: String? = null
     @Volatile private var updateError = ""
+
+    private val speedRe = Regex("at\\s+~?\\s*([0-9.]+\\s*[KMGT]?i?B/s)")
+    private val sizeRe = Regex("of\\s+~?\\s*([0-9.]+\\s*[KMGT]?i?B)")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,6 +77,26 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun fmtEta(s: Long): String {
+        val m = s / 60
+        val r = s % 60
+        return m.toString() + ":" + (if (r < 10) "0" else "") + r
+    }
+
+    private fun handleLine(line: String, eta: Long) {
+        val l = line.trim()
+        if (l.isEmpty()) return
+        if (l.startsWith("[download]") && l.contains("%")) {
+            val sp = speedRe.find(l)
+            if (sp != null) spd = sp.groupValues[1].replace(" ", "")
+            val sz = sizeRe.find(l)
+            if (sz != null) sizeTxt = sz.groupValues[1].replace(" ", "")
+            etaTxt = if (eta >= 0) fmtEta(eta) else ""
+        } else {
+            logLine = l.take(160)
+        }
+    }
+
     inner class Bridge {
         @JavascriptInterface
         fun start(json: String) {
@@ -78,6 +105,10 @@ class MainActivity : Activity() {
             percent = 0
             code = "starting"
             detail = ""
+            spd = ""
+            etaTxt = ""
+            sizeTxt = ""
+            logLine = ""
             Thread { runDownload(JSONObject(json)) }.start()
         }
 
@@ -88,6 +119,10 @@ class MainActivity : Activity() {
             o.put("percent", percent)
             o.put("code", code)
             o.put("detail", detail)
+            o.put("speed", spd)
+            o.put("eta", etaTxt)
+            o.put("size", sizeTxt)
+            o.put("log", logLine)
             return o.toString()
         }
     }
@@ -110,6 +145,7 @@ class MainActivity : Activity() {
 
             val req = YoutubeDLRequest(url)
             req.addOption("--no-mtime")
+            req.addOption("--socket-timeout", "30")
             if (playlist) {
                 req.addOption("-o", job.absolutePath + "/%(playlist_title).60s/%(playlist_index)s - %(title).100s.%(ext)s")
             } else {
@@ -136,9 +172,13 @@ class MainActivity : Activity() {
                 req.addOption("--sub-langs", "en")
             }
 
-            YoutubeDL.getInstance().execute(req, null) { progress, _, _ ->
-                percent = progress.toInt().coerceIn(0, 100)
-                code = "downloading"
+            YoutubeDL.getInstance().execute(req, null) { progress, eta, line ->
+                val pr = progress.toInt()
+                if (pr >= 0) {
+                    percent = pr.coerceIn(0, 100)
+                    code = "downloading"
+                }
+                handleLine(line, eta)
             }
 
             code = "processing"
