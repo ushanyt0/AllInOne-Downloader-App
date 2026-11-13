@@ -193,6 +193,50 @@ class MainActivity : Activity() {
         }
 
         @JavascriptInterface
+        fun pauseDownload() { pauseCurrentDownload() }
+
+        @JavascriptInterface
+        fun resumeDownload() {
+            synchronized(queueLock) {
+                if (status == "paused") {
+                    resumeRequested = true
+                    status = "running"
+                    code = "resuming"
+                    queueLock.notifyAll()
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun listDownloads(): String = getDownloadsJson()
+
+        @JavascriptInterface
+        fun shareDownload(uri: String, mime: String) {
+            runOnUiThread {
+                try {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = mime.ifBlank { "*/*" }
+                        putExtra(Intent.EXTRA_STREAM, Uri.parse(uri))
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivity(Intent.createChooser(send, "Share download"))
+                } catch (e: Throwable) {
+                    web.evaluateJavascript("showDownloadMessage(" + JSONObject.quote(e.message ?: "Cannot share file") + ")", null)
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun deleteDownload(uri: String): Boolean {
+            return try {
+                val parsed = Uri.parse(uri)
+                val treeValue = getSharedPreferences("download_settings", MODE_PRIVATE).getString("tree_uri", null)
+                if (!treeValue.isNullOrBlank()) DocumentsContract.deleteDocument(contentResolver, parsed)
+                else contentResolver.delete(parsed, null, null) > 0
+            } catch (e: Throwable) { false }
+        }
+
+        @JavascriptInterface
         fun preview(url: String) {
             if (status == "running" || previewStatus == "running") return
             previewStatus = "running"
