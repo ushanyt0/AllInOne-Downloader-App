@@ -18,6 +18,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.documentfile.provider.DocumentFile
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
@@ -67,6 +68,11 @@ class MainActivity : Activity() {
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
         web.addJavascriptInterface(Bridge(), "Android")
+        web.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                view?.evaluateJavascript("if(typeof checkClipboardSuggestion==='function')checkClipboardSuggestion()", null)
+            }
+        }
         setContentView(web)
         web.loadUrl("file:///android_asset/index.html")
         createDownloadNotificationChannel()
@@ -122,6 +128,13 @@ class MainActivity : Activity() {
             updateDownloadNotification("Downloading", percent, true)
         } else {
             logLine = l.take(160)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::web.isInitialized) {
+            web.evaluateJavascript("if(typeof checkClipboardSuggestion==='function')checkClipboardSuggestion()", null)
         }
     }
 
