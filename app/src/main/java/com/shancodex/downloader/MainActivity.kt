@@ -215,6 +215,7 @@ class MainActivity : Activity() {
                     resumeRequested = true
                     status = "running"
                     code = "resuming"
+                    updateDownloadNotification("Resuming download", percent, true)
                     queueLock.notifyAll()
                 }
             }
@@ -420,7 +421,7 @@ class MainActivity : Activity() {
                 status = "paused"
                 code = "paused"
                 detail = "Download paused"
-                updateDownloadNotification("Download paused", percent, false)
+                updateDownloadNotification("Download paused", percent, true)
             } else {
                 status = "error"
                 code = "error"
