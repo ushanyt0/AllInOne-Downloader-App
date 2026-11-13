@@ -2,6 +2,8 @@ package com.shancodex.downloader
 
 import android.app.Activity
 import android.content.ContentValues
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import android.graphics.Color
@@ -128,6 +130,17 @@ class MainActivity : Activity() {
     }
 
     inner class Bridge {
+        @JavascriptInterface
+        fun getClipboardText(): String {
+            return try {
+                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                val clip: ClipData? = clipboard.primaryClip
+                clip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this@MainActivity)?.toString() ?: ""
+            } catch (e: Throwable) {
+                ""
+            }
+        }
+
         @JavascriptInterface
         fun getDownloadLocation(): String {
             val value = getSharedPreferences("download_settings", MODE_PRIVATE).getString("tree_uri", null)
