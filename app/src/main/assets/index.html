@@ -84,6 +84,35 @@ body.light .setting-row small{color:#64748b}
 .settings-open{font-size:20px;width:44px;height:42px}
 #settingsMsg{font-size:12px;color:#67e8f9;margin-top:12px;min-height:16px}
 body.light #settingsMsg{color:#0e7490}
+.quality-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;text-align:left;margin:6px 0;padding:14px 16px;border:1px solid #ffffff28;border-radius:15px;background:linear-gradient(135deg,#ffffff18,#ffffff08);color:inherit;font-size:16px;box-shadow:inset 0 1px #ffffff12;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.quality-trigger small{display:block;color:#9aa4b8;font-size:11px;margin-bottom:3px}
+.quality-trigger b{font-size:16px}
+.quality-trigger .chev{font-size:18px;color:#a5b4fc}
+body.light .quality-trigger{background:#ffffffb8;border-color:#cbd5e1}
+.quality-overlay{position:fixed;inset:0;z-index:140;display:none;align-items:flex-end;justify-content:center;padding:16px;background:#02061799;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.quality-overlay.open{display:flex}
+.quality-sheet{width:100%;max-width:460px;max-height:78vh;overflow:auto;border:1px solid #ffffff35;border-radius:25px;padding:18px;background:linear-gradient(145deg,#202b49ed,#111827f2 65%,#172b3cf0);box-shadow:0 24px 80px #000a;backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);animation:sheetIn .22s ease-out}
+body.light .quality-sheet{background:linear-gradient(145deg,#ffffffef,#eaf0fbf2);border-color:#cbd5e1}
+@keyframes sheetIn{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
+.quality-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.quality-head h3{margin:0;font-size:19px}
+.quality-head button{border:1px solid #ffffff25;border-radius:12px;background:#ffffff12;color:inherit;width:34px;height:34px;font-size:20px}
+.quality-caption{font-size:12px;color:#9aa4b8;margin:0 0 14px}
+body.light .quality-caption{color:#64748b}
+.quality-option{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;margin:7px 0;border:1px solid #ffffff20;border-radius:15px;background:#ffffff0c;color:inherit;text-align:left}
+.quality-option.selected{border-color:#7c7cf5;background:linear-gradient(110deg,#8b5cf633,#06b6d433);box-shadow:inset 0 0 0 1px #8b5cf655}
+body.light .quality-option{background:#ffffffb5;border-color:#cbd5e1}
+body.light .quality-option.selected{background:linear-gradient(110deg,#c4b5fd66,#67e8f966);border-color:#818cf8}
+.quality-option b{display:block;font-size:15px}
+.quality-option small{display:block;font-size:11px;color:#9aa4b8;margin-top:3px}
+body.light .quality-option small{color:#64748b}
+.quality-check{width:20px;height:20px;border:2px solid #9ca3af;border-radius:50%;flex:0 0 auto}
+.quality-option.selected .quality-check{border:6px solid #8b7cf6;box-shadow:0 0 14px #8b7cf666}
+.queue-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.queue-btn{flex:1;padding:11px;border:1px solid #ffffff26;border-radius:12px;background:#ffffff0d;color:inherit;font-weight:600}
+.queue-count{font-size:12px;color:#a5b4fc;padding:8px 10px;border:1px solid #8b5cf644;border-radius:999px;background:#8b5cf61a;white-space:nowrap}
+body.light .queue-btn{border-color:#cbd5e1;background:#fff}
+body.light .queue-count{color:#6d28d9}
 </style></head><body>
 <div id="splash">
 <img id="sicon" src="file:///android_res/mipmap/ic_launcher.png" onerror="this.style.display='none'">
@@ -106,7 +135,7 @@ body.light #settingsMsg{color:#0e7490}
 <button class="tab" id="p_tiktok" onclick="setPlat('tiktok')">TikTok</button>
 </div>
 <input type="text" id="url" inputmode="url" onfocus="this.select()" value="https://youtu.be/gwov8azLd2Q?si=0O47vcjsMwJBmP9_">
-<button class="theme-btn" id="previewBtn" onclick="startPreview()" style="width:100%;margin:6px 0">Preview link</button>
+<div style="display:flex;gap:8px;margin:6px 0"><button class="theme-btn" id="pasteBtn" onclick="pasteFromClipboard()" style="flex:1">Paste link</button><button class="theme-btn" id="previewBtn" onclick="startPreview()" style="flex:1">Preview link</button></div>
 <div id="previewBox" style="display:none;margin:8px 0;padding:10px;border:1px solid #ffffff22;border-radius:12px;gap:10px;align-items:center">
 <img id="previewThumb" alt="Video thumbnail" style="width:112px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:none">
 <div style="min-width:0"><b id="previewTitle" style="display:block;font-size:14px;overflow-wrap:anywhere"></b><small id="previewMeta" style="color:#9aa4b8"></small></div>
@@ -115,12 +144,15 @@ body.light #settingsMsg{color:#0e7490}
 <button id="m_video" onclick="setMode('video')" data-k="video"></button>
 <button id="m_audio" onclick="setMode('audio')" data-k="audio"></button>
 </div>
-<select id="quality"></select>
+<button class="quality-trigger" id="qualityTrigger" onclick="openQualityPicker()"><span><small data-k="qualityLabel">Video quality</small><b id="qualityValue">1080p</b></span><span class="chev">⌄</span></button>
+<select id="quality" style="display:none" aria-hidden="true"></select>
+<div class="quality-overlay" id="qualityOverlay" onclick="closeQualityPicker(event)"><div class="quality-sheet" onclick="event.stopPropagation()"><div class="quality-head"><h3 data-k="qualityTitle">Choose quality</h3><button onclick="closeQualityPicker()">×</button></div><p class="quality-caption" data-k="qualityCaption">Select the quality for your download</p><div id="qualityOptions"></div></div></div>
 <div id="yt_only">
 <label class="c"><input type="checkbox" id="playlist"><span data-k="playlist"></span></label>
 <label class="c"><input type="checkbox" id="subs"><span data-k="subs"></span></label>
 </div>
 <button class="go" onclick="go()" data-k="go"></button>
+<div class="queue-row"><button class="queue-btn" onclick="addToQueue()" data-k="addQueue">＋ Add to queue</button><span class="queue-count" id="queueCount">Queue: 0</span></div>
 <div class="bar"><div id="fill"></div></div>
 <div id="msg"></div>
 <div class="stats">
@@ -162,10 +194,10 @@ body.light #settingsMsg{color:#0e7490}
 </div>
 <script>
 var L={
-en:{sub:"Pick a platform, paste a link, choose the quality.",auto:"All sites",note:"Only download content you have the right to.",video:"Video",audio:"Audio (MP3)",best:"Best available",high:"High",med:"Medium",low:"Low",playlist:"Download whole playlist",subs:"Subtitles (English)",go:"Download",spdL:"Speed",etaL:"Time left",sizeL:"Size",ready:"Ready",starting:"Starting...",downloading:"Downloading...",processing:"Processing...",done:"Done! Check your Download folder",error:"Error",busy:"A download is already running",empty:"Please paste a valid link",wrongsite:"This link doesn't match the selected platform",nobridge:"Download engine is not connected",settingsTitle:"Settings",settingsSub:"Personalize your downloader",languageLabel:"Language",languageHint:"Choose your app language",locationLabel:"Download location",chooseFolder:"Choose folder",themeLabel:"Appearance",themeHint:"Dark or light glass theme",historyLabel:"Download history",historyHint:"Remove saved download records",clearHistory:"Clear history",historyTitle:"Download History",historyEmpty:"No downloads yet.",folderUpdated:"Download folder updated",folderDefault:"Download/AllInOneDownloader",themeDark:"Dark",themeLight:"Light"},
-si:{sub:"Platform එක තෝරන්න, link එක දාන්න, quality එක තෝරන්න.",auto:"සියලුම sites",note:"ඔයාට අයිතිය තියෙන content විතරක් download කරන්න.",video:"Video",audio:"Audio (MP3)",best:"ලබාගත හැකි හොඳම",high:"ඉහළ",med:"මධ්‍යම",low:"අඩු",playlist:"Playlist එක සම්පූර්ණයෙන්ම",subs:"Subtitles (English)",go:"Download කරන්න",spdL:"වේගය",etaL:"ඉතුරු කාලය",sizeL:"ප්‍රමාණය",ready:"සූදානම්",starting:"පටන් ගන්නවා...",downloading:"Download වෙනවා...",processing:"සකස් කරනවා...",done:"ඉවරයි! Download folder එක බලන්න",error:"Error",busy:"දැනටමත් download එකක් යනවා",empty:"හරි link එකක් දාන්න",wrongsite:"මේ link එක තෝරපු platform එකට ගැලපෙන්නේ නෑ",nobridge:"Download engine එක සම්බන්ධ නෑ",settingsTitle:"සැකසුම්",settingsSub:"ඔයාගේ Downloader එක කැමති විදිහට සකසන්න",languageLabel:"භාෂාව",languageHint:"App එකේ භාෂාව තෝරන්න",locationLabel:"Download සුරකින ස්ථානය",chooseFolder:"Folder එක තෝරන්න",themeLabel:"පෙනුම",themeHint:"Dark හෝ Light Theme",historyLabel:"Download ඉතිහාසය",historyHint:"සුරැකි Download වාර්තා මකන්න",clearHistory:"ඉතිහාසය මකන්න",historyTitle:"Download ඉතිහාසය",historyEmpty:"තවම Download කරලා නැහැ.",folderUpdated:"Download Folder එක වෙනස් කළා",folderDefault:"Download/AllInOneDownloader",themeDark:"Dark",themeLight:"Light"},
-ta:{sub:"தளத்தைத் தேர்ந்தெடுத்து, இணைப்பை ஒட்டி, தரத்தைத் தேர்ந்தெடுக்கவும்.",auto:"அனைத்தும்",note:"உங்களுக்கு உரிமை உள்ள உள்ளடக்கத்தை மட்டும் பதிவிறக்கவும்.",video:"வீடியோ",audio:"ஆடியோ (MP3)",best:"கிடைக்கும் சிறந்தது",high:"உயர்",med:"நடுத்தரம்",low:"குறைவு",playlist:"முழு பிளேலிஸ்ட்டையும் பதிவிறக்கு",subs:"வசனங்கள் (English)",go:"பதிவிறக்கு",spdL:"வேகம்",etaL:"மீதமுள்ள நேரம்",sizeL:"அளவு",ready:"தயார்",starting:"தொடங்குகிறது...",downloading:"பதிவிறக்கப்படுகிறது...",processing:"செயலாக்கப்படுகிறது...",done:"முடிந்தது! Download folder-ஐப் பாருங்கள்",error:"பிழை",busy:"ஒரு பதிவிறக்கம் ஏற்கனவே நடக்கிறது",empty:"சரியான இணைப்பை ஒட்டவும்",wrongsite:"இந்த இணைப்பு தேர்ந்தெடுத்த தளத்துடன் பொருந்தவில்லை",nobridge:"பதிவிறக்க இயந்திரம் இணைக்கப்படவில்லை",settingsTitle:"அமைப்புகள்",settingsSub:"உங்கள் பதிவிறக்கியை தனிப்பயனாக்குங்கள்",languageLabel:"மொழி",languageHint:"பயன்பாட்டு மொழியைத் தேர்ந்தெடுக்கவும்",locationLabel:"பதிவிறக்க இடம்",chooseFolder:"கோப்புறையைத் தேர்வு",themeLabel:"தோற்றம்",themeHint:"இருண்ட அல்லது ஒளி தீம்",historyLabel:"பதிவிறக்க வரலாறு",historyHint:"சேமித்த பதிவுகளை நீக்கவும்",clearHistory:"வரலாற்றை அழி",historyTitle:"பதிவிறக்க வரலாறு",historyEmpty:"இன்னும் பதிவிறக்கங்கள் இல்லை.",folderUpdated:"பதிவிறக்க கோப்புறை புதுப்பிக்கப்பட்டது",folderDefault:"Download/AllInOneDownloader",themeDark:"இருண்ட",themeLight:"ஒளி"},
-hi:{sub:"प्लेटफ़ॉर्म चुनें, लिंक पेस्ट करें और क्वालिटी चुनें।",auto:"सभी साइट",note:"केवल वही कंटेंट डाउनलोड करें जिसका आपको अधिकार है।",video:"वीडियो",audio:"ऑडियो (MP3)",best:"सबसे अच्छी उपलब्ध",high:"उच्च",med:"मध्यम",low:"कम",playlist:"पूरी प्लेलिस्ट डाउनलोड करें",subs:"सबटाइटल (English)",go:"डाउनलोड करें",spdL:"गति",etaL:"बचा समय",sizeL:"आकार",ready:"तैयार",starting:"शुरू हो रहा है...",downloading:"डाउनलोड हो रहा है...",processing:"प्रोसेस हो रहा है...",done:"हो गया! Download folder देखें",error:"त्रुटि",busy:"एक डाउनलोड पहले से चल रहा है",empty:"सही लिंक पेस्ट करें",wrongsite:"यह लिंक चुने हुए प्लेटफ़ॉर्म से मेल नहीं खाता",nobridge:"डाउनलोड इंजन जुड़ा नहीं है",settingsTitle:"सेटिंग्स",settingsSub:"अपने डाउनलोडर को अपनी पसंद के अनुसार बनाएं",languageLabel:"भाषा",languageHint:"ऐप की भाषा चुनें",locationLabel:"डाउनलोड स्थान",chooseFolder:"फ़ोल्डर चुनें",themeLabel:"दिखावट",themeHint:"डार्क या लाइट थीम",historyLabel:"डाउनलोड इतिहास",historyHint:"सहेजे गए डाउनलोड रिकॉर्ड हटाएं",clearHistory:"इतिहास साफ़ करें",historyTitle:"डाउनलोड इतिहास",historyEmpty:"अभी तक कोई डाउनलोड नहीं।",folderUpdated:"डाउनलोड फ़ोल्डर अपडेट हुआ",folderDefault:"Download/AllInOneDownloader",themeDark:"डार्क",themeLight:"लाइट"}
+en:{sub:"Pick a platform, paste a link, choose the quality.",auto:"All sites",note:"Only download content you have the right to.",video:"Video",audio:"Audio (MP3)",best:"Best available",high:"High",med:"Medium",low:"Low",playlist:"Download whole playlist",subs:"Subtitles (English)",go:"Download",spdL:"Speed",etaL:"Time left",sizeL:"Size",ready:"Ready",starting:"Starting...",downloading:"Downloading...",processing:"Processing...",done:"Done! Check your Download folder",error:"Error",busy:"A download is already running",empty:"Please paste a valid link",wrongsite:"This link doesn't match the selected platform",nobridge:"Download engine is not connected",settingsTitle:"Settings",settingsSub:"Personalize your downloader",languageLabel:"Language",languageHint:"Choose your app language",locationLabel:"Download location",chooseFolder:"Choose folder",themeLabel:"Appearance",themeHint:"Dark or light glass theme",historyLabel:"Download history",historyHint:"Remove saved download records",clearHistory:"Clear history",historyTitle:"Download History",historyEmpty:"No downloads yet.",folderUpdated:"Download folder updated",folderDefault:"Download/AllInOneDownloader",themeDark:"Dark",themeLight:"Light",pasteLink:"Paste link",qualityLabel:"Video quality",audioQualityLabel:"Audio quality",qualityTitle:"Choose quality",qualityCaption:"Select the quality for your download",addQueue:"＋ Add to queue",queueLabel:"Queue",queued:"Added to queue",queueEmpty:"Queue is empty"},
+si:{sub:"Platform එක තෝරන්න, link එක දාන්න, quality එක තෝරන්න.",auto:"සියලුම sites",note:"ඔයාට අයිතිය තියෙන content විතරක් download කරන්න.",video:"Video",audio:"Audio (MP3)",best:"ලබාගත හැකි හොඳම",high:"ඉහළ",med:"මධ්‍යම",low:"අඩු",playlist:"Playlist එක සම්පූර්ණයෙන්ම",subs:"Subtitles (English)",go:"Download කරන්න",spdL:"වේගය",etaL:"ඉතුරු කාලය",sizeL:"ප්‍රමාණය",ready:"සූදානම්",starting:"පටන් ගන්නවා...",downloading:"Download වෙනවා...",processing:"සකස් කරනවා...",done:"ඉවරයි! Download folder එක බලන්න",error:"Error",busy:"දැනටමත් download එකක් යනවා",empty:"හරි link එකක් දාන්න",wrongsite:"මේ link එක තෝරපු platform එකට ගැලපෙන්නේ නෑ",nobridge:"Download engine එක සම්බන්ධ නෑ",settingsTitle:"සැකසුම්",settingsSub:"ඔයාගේ Downloader එක කැමති විදිහට සකසන්න",languageLabel:"භාෂාව",languageHint:"App එකේ භාෂාව තෝරන්න",locationLabel:"Download සුරකින ස්ථානය",chooseFolder:"Folder එක තෝරන්න",themeLabel:"පෙනුම",themeHint:"Dark හෝ Light Theme",historyLabel:"Download ඉතිහාසය",historyHint:"සුරැකි Download වාර්තා මකන්න",clearHistory:"ඉතිහාසය මකන්න",historyTitle:"Download ඉතිහාසය",historyEmpty:"තවම Download කරලා නැහැ.",folderUpdated:"Download Folder එක වෙනස් කළා",folderDefault:"Download/AllInOneDownloader",themeDark:"Dark",themeLight:"Light",pasteLink:"Link එක Paste කරන්න",qualityLabel:"Video Quality",audioQualityLabel:"Audio Quality",qualityTitle:"Quality එක තෝරන්න",qualityCaption:"Download එකට අවශ්‍ය Quality එක තෝරන්න",addQueue:"＋ Queue එකට දාන්න",queueLabel:"Queue",queued:"Queue එකට එකතු කළා",queueEmpty:"Queue එක හිස්"},
+ta:{sub:"தளத்தைத் தேர்ந்தெடுத்து, இணைப்பை ஒட்டி, தரத்தைத் தேர்ந்தெடுக்கவும்.",auto:"அனைத்தும்",note:"உங்களுக்கு உரிமை உள்ள உள்ளடக்கத்தை மட்டும் பதிவிறக்கவும்.",video:"வீடியோ",audio:"ஆடியோ (MP3)",best:"கிடைக்கும் சிறந்தது",high:"உயர்",med:"நடுத்தரம்",low:"குறைவு",playlist:"முழு பிளேலிஸ்ட்டையும் பதிவிறக்கு",subs:"வசனங்கள் (English)",go:"பதிவிறக்கு",spdL:"வேகம்",etaL:"மீதமுள்ள நேரம்",sizeL:"அளவு",ready:"தயார்",starting:"தொடங்குகிறது...",downloading:"பதிவிறக்கப்படுகிறது...",processing:"செயலாக்கப்படுகிறது...",done:"முடிந்தது! Download folder-ஐப் பாருங்கள்",error:"பிழை",busy:"ஒரு பதிவிறக்கம் ஏற்கனவே நடக்கிறது",empty:"சரியான இணைப்பை ஒட்டவும்",wrongsite:"இந்த இணைப்பு தேர்ந்தெடுத்த தளத்துடன் பொருந்தவில்லை",nobridge:"பதிவிறக்க இயந்திரம் இணைக்கப்படவில்லை",settingsTitle:"அமைப்புகள்",settingsSub:"உங்கள் பதிவிறக்கியை தனிப்பயனாக்குங்கள்",languageLabel:"மொழி",languageHint:"பயன்பாட்டு மொழியைத் தேர்ந்தெடுக்கவும்",locationLabel:"பதிவிறக்க இடம்",chooseFolder:"கோப்புறையைத் தேர்வு",themeLabel:"தோற்றம்",themeHint:"இருண்ட அல்லது ஒளி தீம்",historyLabel:"பதிவிறக்க வரலாறு",historyHint:"சேமித்த பதிவுகளை நீக்கவும்",clearHistory:"வரலாற்றை அழி",historyTitle:"பதிவிறக்க வரலாறு",historyEmpty:"இன்னும் பதிவிறக்கங்கள் இல்லை.",folderUpdated:"பதிவிறக்க கோப்புறை புதுப்பிக்கப்பட்டது",folderDefault:"Download/AllInOneDownloader",themeDark:"இருண்ட",themeLight:"ஒளி",pasteLink:"இணைப்பை ஒட்டு",qualityLabel:"வீடியோ தரம்",audioQualityLabel:"ஆடியோ தரம்",qualityTitle:"தரத்தைத் தேர்ந்தெடுக்கவும்",qualityCaption:"பதிவிறக்கத் தரத்தைத் தேர்ந்தெடுக்கவும்",addQueue:"＋ வரிசையில் சேர்",queueLabel:"வரிசை",queued:"வரிசையில் சேர்க்கப்பட்டது",queueEmpty:"வரிசை காலியாக உள்ளது"},
+hi:{sub:"प्लेटफ़ॉर्म चुनें, लिंक पेस्ट करें और क्वालिटी चुनें।",auto:"सभी साइट",note:"केवल वही कंटेंट डाउनलोड करें जिसका आपको अधिकार है।",video:"वीडियो",audio:"ऑडियो (MP3)",best:"सबसे अच्छी उपलब्ध",high:"उच्च",med:"मध्यम",low:"कम",playlist:"पूरी प्लेलिस्ट डाउनलोड करें",subs:"सबटाइटल (English)",go:"डाउनलोड करें",spdL:"गति",etaL:"बचा समय",sizeL:"आकार",ready:"तैयार",starting:"शुरू हो रहा है...",downloading:"डाउनलोड हो रहा है...",processing:"प्रोसेस हो रहा है...",done:"हो गया! Download folder देखें",error:"त्रुटि",busy:"एक डाउनलोड पहले से चल रहा है",empty:"सही लिंक पेस्ट करें",wrongsite:"यह लिंक चुने हुए प्लेटफ़ॉर्म से मेल नहीं खाता",nobridge:"डाउनलोड इंजन जुड़ा नहीं है",settingsTitle:"सेटिंग्स",settingsSub:"अपने डाउनलोडर को अपनी पसंद के अनुसार बनाएं",languageLabel:"भाषा",languageHint:"ऐप की भाषा चुनें",locationLabel:"डाउनलोड स्थान",chooseFolder:"फ़ोल्डर चुनें",themeLabel:"दिखावट",themeHint:"डार्क या लाइट थीम",historyLabel:"डाउनलोड इतिहास",historyHint:"सहेजे गए डाउनलोड रिकॉर्ड हटाएं",clearHistory:"इतिहास साफ़ करें",historyTitle:"डाउनलोड इतिहास",historyEmpty:"अभी तक कोई डाउनलोड नहीं।",folderUpdated:"डाउनलोड फ़ोल्डर अपडेट हुआ",folderDefault:"Download/AllInOneDownloader",themeDark:"डार्क",themeLight:"लाइट",pasteLink:"लिंक पेस्ट करें",qualityLabel:"वीडियो गुणवत्ता",audioQualityLabel:"ऑडियो गुणवत्ता",qualityTitle:"गुणवत्ता चुनें",qualityCaption:"डाउनलोड के लिए गुणवत्ता चुनें",addQueue:"＋ कतार में जोड़ें",queueLabel:"कतार",queued:"कतार में जोड़ा गया",queueEmpty:"कतार खाली है"}
 };
 var EXAMPLE="https://youtu.be/gwov8azLd2Q?si=0O47vcjsMwJBmP9_";
 var P={auto:[],youtube:["youtube.com","youtu.be"],facebook:["facebook.com","fb.watch","fb.com"],instagram:["instagram.com","instagr.am"],tiktok:["tiktok.com"]};
@@ -178,7 +210,8 @@ var plat="auto";
 var last={code:"ready",percent:0,status:"idle",detail:""};
 var timer=null;
 var previewTimer=null;
-var historySaved=false;
+var pendingHistory=[];
+var lastProgressStatus="";
 function toggleTheme(){var light=!document.body.classList.contains("light");document.body.classList.toggle("light",light);try{localStorage.setItem("theme",light?"light":"dark");}catch(e){}var b=document.getElementById("themeSettingBtn");if(b)b.textContent=light?L[lang].themeLight:L[lang].themeDark;}
 function loadTheme(){var t="dark";try{t=localStorage.getItem("theme")||"dark";}catch(e){}document.body.classList.toggle("light",t==="light");var b=document.getElementById("themeSettingBtn");if(b)b.textContent=t==="light"?L[lang].themeLight:L[lang].themeDark;}
 function openSettings(){document.getElementById("settingsOverlay").classList.add("open");refreshDownloadLocation();}
@@ -188,24 +221,52 @@ function onDownloadLocationChanged(path){document.getElementById("locationPath")
 function chooseDownloadLocation(){if(window.Android){Android.chooseDownloadFolder();}else{document.getElementById("settingsMsg").textContent=L[lang].nobridge;}}
 function clearHistory(){try{localStorage.removeItem("downloadHistory");}catch(e){}renderHistory();document.getElementById("settingsMsg").textContent=L[lang].historyEmpty;}
 function renderHistory(){var h=[];try{h=JSON.parse(localStorage.getItem("downloadHistory")||"[]");}catch(e){}var box=document.getElementById("historyList");if(!h.length){box.className="history-empty";box.textContent=L[lang].historyEmpty;return;}box.className="";box.innerHTML="";h.forEach(function(x){var d=document.createElement("div");d.className="history-item";var b=document.createElement("b");b.textContent=x.mode.toUpperCase()+" • "+x.quality+" • "+x.platform;var a=document.createElement("div");a.textContent=x.url;var t=document.createElement("div");t.textContent=x.date;d.appendChild(b);d.appendChild(a);d.appendChild(t);box.appendChild(d);});}
-function saveHistory(){if(historySaved)return;historySaved=true;var h=[];try{h=JSON.parse(localStorage.getItem("downloadHistory")||"[]");}catch(e){}h.unshift({url:document.getElementById("url").value.trim(),platform:plat,mode:mode,quality:document.getElementById("quality").value,date:new Date().toLocaleString()});try{localStorage.setItem("downloadHistory",JSON.stringify(h.slice(0,30)));}catch(e){}renderHistory();}
+function saveHistory(entry){if(!entry)return;var h=[];try{h=JSON.parse(localStorage.getItem("downloadHistory")||"[]");}catch(e){}h.unshift(entry);try{localStorage.setItem("downloadHistory",JSON.stringify(h.slice(0,30)));}catch(e){}renderHistory();}
 function fill(){
   var t=L[lang];
   var q=document.getElementById("quality");
   var old=q.value;
   var list=(mode==="video")
-    ?[["1080","1080p"],["720","720p"],["480","480p"],["360","360p"],["best",t.best]]
-    :[["320",t.high+" (320k)"],["192",t.med+" (192k)"],["128",t.low+" (128k)"]];
+    ?[["1080","1080p","Full HD · 1920×1080"],["720","720p","HD · 1280×720"],["480","480p","SD · 854×480"],["360","360p","Low data · 640×360"],["best",t.best,"Highest format available"]]
+    :[["320",t.high+" (320k)","High bitrate · MP3"],["192",t.med+" (192k)","Balanced bitrate · MP3"],["128",t.low+" (128k)","Smaller file · MP3"]];
   q.innerHTML="";
   list.forEach(function(o){
-    q.innerHTML+='<option value="'+o[0]+'">'+o[1]+'</option>';
+    var option=document.createElement("option");option.value=o[0];option.textContent=o[1];option.dataset.hint=o[2];q.appendChild(option);
   });
-  for(var i=0;i<q.options.length;i++){
-    if(q.options[i].value===old){q.value=old;}
-  }
+  if(!Array.from(q.options).some(function(o){return o.value===old;}))q.value=list[0][0];else q.value=old;
+  renderQualityPicker();
+}
+function renderQualityPicker(){
+  var q=document.getElementById("quality"),box=document.getElementById("qualityOptions");
+  if(!q||!box)return;
+  var current=q.options[q.selectedIndex];
+  document.getElementById("qualityValue").textContent=current?current.textContent:"";
+  box.innerHTML="";
+  Array.from(q.options).forEach(function(o){
+    var b=document.createElement("button");b.type="button";b.className="quality-option"+(o.value===q.value?" selected":"");
+    var info=document.createElement("span"),title=document.createElement("b"),hint=document.createElement("small"),check=document.createElement("i");
+    title.textContent=o.textContent;hint.textContent=o.dataset.hint||"";check.className="quality-check";
+    info.appendChild(title);info.appendChild(hint);b.appendChild(info);b.appendChild(check);
+    b.onclick=function(){q.value=o.value;renderQualityPicker();closeQualityPicker();};
+    box.appendChild(b);
+  });
+}
+function openQualityPicker(){renderQualityPicker();document.getElementById("qualityOverlay").classList.add("open");}
+function closeQualityPicker(e){if(!e||e.target===document.getElementById("qualityOverlay"))document.getElementById("qualityOverlay").classList.remove("open");}
+function addToQueue(){
+  var u=document.getElementById("url").value.trim(),low=u.toLowerCase(),dom=P[plat];
+  if(low.indexOf("http://")!==0&&low.indexOf("https://")!==0){show({code:"empty",percent:0,status:"idle",detail:""});return;}
+  if(dom.length&&!dom.some(function(d){return low.indexOf(d)>-1;})){show({code:"wrongsite",percent:0,status:"idle",detail:""});return;}
+  if(!window.Android){show({code:"nobridge",percent:0,status:"idle",detail:""});return;}
+  var yt=(plat==="auto"||plat==="youtube");
+  var task={url:u,mode:mode,quality:document.getElementById("quality").value,playlist:yt&&document.getElementById("playlist").checked,subs:yt&&document.getElementById("subs").checked};pendingHistory.push({url:u,platform:plat,mode:mode,quality:task.quality,date:new Date().toLocaleString()});Android.enqueue(JSON.stringify(task));
+  document.getElementById("queueCount").textContent=L[lang].queueLabel+": "+Android.queueCount();
+  document.getElementById("msg").textContent=L[lang].queued;
+  clearInterval(timer);timer=setInterval(poll,1000);
 }
 function setMode(m){
   mode=m;
+  var qLabel=document.querySelector("[data-k=qualityLabel]");if(qLabel)qLabel.textContent=(m==="video"?L[lang].qualityLabel:L[lang].audioQualityLabel);
   document.getElementById("m_video").className=(m==="video")?"on":"";
   document.getElementById("m_audio").className=(m==="audio")?"on":"";
   fill();
@@ -236,12 +297,17 @@ function show(s){
 }
 function apply(){
   var t=L[lang];
+  var paste=document.getElementById("pasteBtn");if(paste)paste.textContent=t.pasteLink;
   var els=document.querySelectorAll("[data-k]");
   for(var i=0;i<els.length;i++){
     els[i].textContent=t[els[i].getAttribute("data-k")];
   }
   document.getElementById("historyTitle").textContent=t.historyTitle;
   var tb=document.getElementById("themeSettingBtn");if(tb)tb.textContent=document.body.classList.contains("light")?t.themeLight:t.themeDark;
+  var ql=document.querySelector('[data-k="qualityLabel"]');if(ql)ql.textContent=t.qualityLabel;
+  var qt=document.querySelector('[data-k="qualityTitle"]');if(qt)qt.textContent=t.qualityTitle;
+  var qc=document.querySelector('[data-k="qualityCaption"]');if(qc)qc.textContent=t.qualityCaption;
+  var aq=document.querySelector('[data-k="addQueue"]');if(aq)aq.textContent=t.addQueue;
   setMode(mode);
   show(last);
   renderHistory();
@@ -256,6 +322,12 @@ apply();
 loadTheme();
 refreshDownloadLocation();
 setPlat("auto");
+function pasteFromClipboard(){
+  if(!window.Android){document.getElementById("msg").textContent=L[lang].nobridge;return;}
+  var value=Android.getClipboardText();
+  if(value&&/^https?:\/\//i.test(value.trim())){document.getElementById("url").value=value.trim();document.getElementById("msg").textContent="Link pasted";}
+  else{document.getElementById("msg").textContent="No valid link in clipboard";}
+}
 function startPreview(){
   var u=document.getElementById("url").value.trim();
   if(!/^https?:\/\//i.test(u)){document.getElementById("previewBox").style.display="flex";document.getElementById("previewTitle").textContent=L[lang].empty;return;}
@@ -303,19 +375,18 @@ function go(){
     return;
   }
   var yt=(plat==="auto"||plat==="youtube");
-  Android.start(JSON.stringify({
-    url:u,
-    mode:mode,
-    quality:document.getElementById("quality").value,
-    playlist:yt&&document.getElementById("playlist").checked,
-    subs:yt&&document.getElementById("subs").checked}));
+  var task={url:u,mode:mode,quality:document.getElementById("quality").value,playlist:yt&&document.getElementById("playlist").checked,subs:yt&&document.getElementById("subs").checked};pendingHistory.push({url:u,platform:plat,mode:mode,quality:task.quality,date:new Date().toLocaleString()});Android.start(JSON.stringify(task));
   clearInterval(timer);
   timer=setInterval(poll,1000);
 }
 function poll(){
   var s=JSON.parse(Android.progress());
   show(s);
-  if(s.status==="done"){saveHistory();}
-  if(s.status!=="running"){clearInterval(timer);}
+  if(s.status==="done"&&lastProgressStatus!=="done"){saveHistory(pendingHistory.shift());}
+  if(s.status==="error"&&lastProgressStatus!=="error"){pendingHistory.shift();}
+  lastProgressStatus=s.status;
+  var count=Android.queueCount();
+  document.getElementById("queueCount").textContent=L[lang].queueLabel+": "+count;
+  if(s.status!=="running"&&count===0){clearInterval(timer);}
 }
 </script></body></html>

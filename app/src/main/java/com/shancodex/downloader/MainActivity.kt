@@ -2,6 +2,8 @@ package com.shancodex.downloader
 
 import android.app.Activity
 import android.content.ContentValues
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import android.graphics.Color
@@ -17,10 +19,13 @@ import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.LinkedBlockingQueue
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private val folderPickerRequest = 4817
+    private val downloadQueue = LinkedBlockingQueue<String>()
+    @Volatile private var queueWorkerActive = false
 
     @Volatile private var status = "idle"
     @Volatile private var percent = 0
@@ -126,6 +131,17 @@ class MainActivity : Activity() {
 
     inner class Bridge {
         @JavascriptInterface
+        fun getClipboardText(): String {
+            return try {
+                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                val clip: ClipData? = clipboard.primaryClip
+                clip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this@MainActivity)?.toString() ?: ""
+            } catch (e: Throwable) {
+                ""
+            }
+        }
+
+        @JavascriptInterface
         fun getDownloadLocation(): String {
             val value = getSharedPreferences("download_settings", MODE_PRIVATE).getString("tree_uri", null)
                 ?: return "Download/AllInOneDownloader"
@@ -149,16 +165,17 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun start(json: String) {
-            if (status == "running") return
-            status = "running"
-            percent = 0
-            code = "starting"
-            detail = ""
-            spd = ""
-            etaTxt = ""
-            sizeTxt = ""
-            logLine = ""
-            Thread { runDownload(JSONObject(json)) }.start()
+            enqueueDownload(json)
+        }
+
+        @JavascriptInterface
+        fun enqueue(json: String) {
+            enqueueDownload(json)
+        }
+
+        @JavascriptInterface
+        fun queueCount(): Int {
+            return downloadQueue.size + if (queueWorkerActive) 1 else 0
         }
 
         @JavascriptInterface
@@ -209,6 +226,42 @@ class MainActivity : Activity() {
             o.put("size", sizeTxt)
             o.put("log", logLine)
             return o.toString()
+        }
+    }
+
+    private fun enqueueDownload(json: String) {
+        var shouldStartWorker = false
+        synchronized(this) {
+            downloadQueue.offer(json)
+            if (!queueWorkerActive) {
+                queueWorkerActive = true
+                shouldStartWorker = true
+            }
+        }
+        if (shouldStartWorker) {
+            Thread {
+                while (true) {
+                    val next = synchronized(this) {
+                        val item = downloadQueue.poll()
+                        if (item == null) queueWorkerActive = false
+                        item
+                    } ?: break
+
+                    status = "running"
+                    percent = 0
+                    code = "starting"
+                    detail = ""
+                    spd = ""
+                    etaTxt = ""
+                    sizeTxt = ""
+                    logLine = ""
+                    runDownload(JSONObject(next))
+
+                    // Keep the completed state visible long enough for the WebView
+                    // to record this item in local download history before the next starts.
+                    if (downloadQueue.isNotEmpty()) Thread.sleep(1200)
+                }
+            }.start()
         }
     }
 
