@@ -15,8 +15,8 @@ android {
         applicationId = "com.shancodex.downloader"
         minSdk = 24
         targetSdk = 34
-        versionCode = 6
-        versionName = "0.6"
+        versionCode = 7
+        versionName = "0.6.1"
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
