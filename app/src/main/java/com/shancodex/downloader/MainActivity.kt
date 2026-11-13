@@ -305,20 +305,30 @@ class MainActivity : Activity() {
                         item
                     } ?: break
 
-                    status = "running"
-                    percent = 0
-                    code = "starting"
-                    detail = ""
-                    spd = ""
-                    etaTxt = ""
-                    sizeTxt = ""
-                    logLine = ""
-                    runDownload(JSONObject(next))
+                    val task = JSONObject(next)
+                    if (!task.has("jobId")) task.put("jobId", java.util.UUID.randomUUID().toString())
+                    do {
+                        pauseRequested = false
+                        status = "running"
+                        percent = 0
+                        code = "starting"
+                        detail = ""
+                        spd = ""
+                        etaTxt = ""
+                        sizeTxt = ""
+                        logLine = ""
+                        runDownload(task)
+                        if (status == "paused") {
+                            synchronized(queueLock) {
+                                while (status == "paused" && !resumeRequested) queueLock.wait()
+                                resumeRequested = false
+                            }
+                        }
+                    } while (status == "running" && code == "resuming")
 
-                    // Keep the completed state visible long enough for the WebView
-                    // to record this item in local download history before the next starts.
                     if (downloadQueue.isNotEmpty()) Thread.sleep(1200)
                 }
+                updateDownloadNotification("All downloads finished", 100, false)
             }.start()
         }
     }
