@@ -446,6 +446,55 @@ class MainActivity : Activity() {
         } catch (_: Throwable) { }
     }
 
+    private fun getDownloadsJson(): String {
+        val result = org.json.JSONArray()
+        val treeValue = getSharedPreferences("download_settings", MODE_PRIVATE).getString("tree_uri", null)
+        try {
+            if (!treeValue.isNullOrBlank()) {
+                val tree = DocumentFile.fromTreeUri(this, Uri.parse(treeValue))
+                tree?.listFiles()?.filter { it.isFile }?.forEach { file ->
+                    val item = JSONObject()
+                    item.put("name", file.name ?: "Download")
+                    item.put("uri", file.uri.toString())
+                    item.put("mime", file.type ?: "*/*")
+                    item.put("size", file.length())
+                    result.put(item)
+                }
+            } else if (Build.VERSION.SDK_INT >= 29) {
+                val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME,
+                    MediaStore.MediaColumns.MIME_TYPE, MediaStore.MediaColumns.SIZE)
+                val selection = MediaStore.MediaColumns.RELATIVE_PATH + "=?"
+                contentResolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection,
+                    arrayOf(Environment.DIRECTORY_DOWNLOADS + "/AllInOneDownloader/"), MediaStore.MediaColumns.DATE_ADDED + " DESC")?.use { cursor ->
+                    val idCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+                    val nameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+                    val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE)
+                    val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
+                    while (cursor.moveToNext()) {
+                        val item = JSONObject()
+                        val uri = Uri.withAppendedPath(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cursor.getLong(idCol).toString())
+                        item.put("name", cursor.getString(nameCol) ?: "Download")
+                        item.put("uri", uri.toString())
+                        item.put("mime", cursor.getString(mimeCol) ?: "*/*")
+                        item.put("size", cursor.getLong(sizeCol))
+                        result.put(item)
+                    }
+                }
+            } else {
+                val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "AllInOneDownloader")
+                dir.listFiles()?.filter { it.isFile }?.forEach { file ->
+                    val item = JSONObject()
+                    item.put("name", file.name)
+                    item.put("uri", Uri.fromFile(file).toString())
+                    item.put("mime", "*/*")
+                    item.put("size", file.length())
+                    result.put(item)
+                }
+            }
+        } catch (_: Throwable) { }
+        return result.toString()
+    }
+
     private fun saveToDownloads(f: File, root: File) {
         val mime = when (f.extension.lowercase()) {
             "mp4" -> "video/mp4"
