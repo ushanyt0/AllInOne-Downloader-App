@@ -252,9 +252,11 @@ class MainActivity : Activity() {
                 val treeValue = getSharedPreferences("download_settings", MODE_PRIVATE).getString("tree_uri", null)
                 when {
                     parsed.scheme == "file" -> File(parsed.path ?: return false).delete()
-                    DocumentsContract.isDocumentUri(this@MainActivity, parsed) ->
-                        (DocumentFile.fromSingleUri(this@MainActivity, parsed)?.delete()
-                            ?: DocumentsContract.deleteDocument(contentResolver, parsed))
+                    DocumentsContract.isDocumentUri(this@MainActivity, parsed) -> {
+                        val documentFile = DocumentFile.fromSingleUri(this@MainActivity, parsed)
+                        if (documentFile?.delete() == true) true
+                        else DocumentsContract.deleteDocument(contentResolver, parsed)
+                    }
                     else -> contentResolver.delete(parsed, null, null) > 0
                 }
             } catch (e: Throwable) { false }
@@ -364,7 +366,10 @@ class MainActivity : Activity() {
 
     private fun runDownload(o: JSONObject) {
         try {
-            while (!ready && initError == null) Thread.sleep(300)
+            while (!ready && initError == null) {
+                if (cancelRequested) throw InterruptedException("Download cancelled")
+                Thread.sleep(300)
+            }
             val ie = initError
             if (ie != null) throw Exception("Init failed: " + ie)
 
