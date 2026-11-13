@@ -430,6 +430,7 @@ class MainActivity : Activity() {
                 if (cancelRequested) throw InterruptedException("Download cancelled")
                 saveToDownloads(f, job)
             }
+            if (cancelRequested) throw InterruptedException("Download cancelled")
             status = "done"
             percent = 100
             code = "done"
