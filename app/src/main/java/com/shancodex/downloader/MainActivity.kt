@@ -2,6 +2,8 @@ package com.shancodex.downloader
 
 import android.app.Activity
 import android.content.ContentValues
+import android.content.Intent
+import android.net.Uri
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -9,6 +11,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import androidx.documentfile.provider.DocumentFile
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
@@ -17,6 +20,7 @@ import java.io.File
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
+    private val folderPickerRequest = 4817
 
     @Volatile private var status = "idle"
     @Volatile private var percent = 0
@@ -102,7 +106,47 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == folderPickerRequest && resultCode == RESULT_OK) {
+            val uri = data?.data ?: return
+            try {
+                val flags = data.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                contentResolver.takePersistableUriPermission(uri, flags)
+                getSharedPreferences("download_settings", MODE_PRIVATE).edit()
+                    .putString("tree_uri", uri.toString()).apply()
+                val folderName = DocumentFile.fromTreeUri(this, uri)?.name ?: "Selected folder"
+                web.evaluateJavascript("onDownloadLocationChanged(${JSONObject.quote(folderName)})", null)
+            } catch (e: Throwable) {
+                val message = e.message ?: "Could not access selected folder"
+                web.evaluateJavascript("document.getElementById('settingsMsg').textContent=${JSONObject.quote(message)}", null)
+            }
+        }
+    }
+
     inner class Bridge {
+        @JavascriptInterface
+        fun getDownloadLocation(): String {
+            val value = getSharedPreferences("download_settings", MODE_PRIVATE).getString("tree_uri", null)
+                ?: return "Download/AllInOneDownloader"
+            return try {
+                DocumentFile.fromTreeUri(this@MainActivity, Uri.parse(value))?.name ?: "Selected folder"
+            } catch (e: Throwable) {
+                "Selected folder"
+            }
+        }
+
+        @JavascriptInterface
+        fun chooseDownloadFolder() {
+            runOnUiThread {
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or Intent.FLAG_GRANT_PREFIX_URI_PERMISSION)
+                }
+                startActivityForResult(intent, folderPickerRequest)
+            }
+        }
+
         @JavascriptInterface
         fun start(json: String) {
             if (status == "running") return
@@ -243,8 +287,6 @@ class MainActivity : Activity() {
     }
 
     private fun saveToDownloads(f: File, root: File) {
-        val rel = f.relativeTo(root).parent
-        val sub = if (rel == null) "AllInOneDownloader" else "AllInOneDownloader/" + rel
         val mime = when (f.extension.lowercase()) {
             "mp4" -> "video/mp4"
             "mp3" -> "audio/mpeg"
@@ -253,6 +295,30 @@ class MainActivity : Activity() {
             "vtt" -> "text/vtt"
             else -> "application/octet-stream"
         }
+
+        val treeValue = getSharedPreferences("download_settings", MODE_PRIVATE).getString("tree_uri", null)
+        if (!treeValue.isNullOrBlank()) {
+            val tree = DocumentFile.fromTreeUri(this, Uri.parse(treeValue))
+                ?: throw Exception("Selected download folder is no longer available. Choose it again in Settings.")
+            var destination = tree
+            val relative = f.relativeTo(root).parent
+            if (!relative.isNullOrBlank()) {
+                relative.split(File.separatorChar).filter { it.isNotBlank() }.forEach { part ->
+                    destination = destination.findFile(part)?.takeIf { it.isDirectory }
+                        ?: destination.createDirectory(part)
+                        ?: throw Exception("Cannot create folder: " + part)
+                }
+            }
+            destination.findFile(f.name)?.delete()
+            val outputFile = destination.createFile(mime, f.name)
+                ?: throw Exception("Cannot create file in selected folder")
+            contentResolver.openOutputStream(outputFile.uri, "w")?.use { out ->
+                f.inputStream().use { it.copyTo(out) }
+            } ?: throw Exception("Cannot write to selected folder")
+            return
+        }
+
+        val sub = "AllInOneDownloader"
         if (Build.VERSION.SDK_INT >= 29) {
             val v = ContentValues()
             v.put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
