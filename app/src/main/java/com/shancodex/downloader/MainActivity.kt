@@ -34,6 +34,8 @@ class MainActivity : Activity() {
     @Volatile private var queueWorkerActive = false
     @Volatile private var pauseRequested = false
     @Volatile private var resumeRequested = false
+    @Volatile private var cancelRequested = false
+    @Volatile private var currentJobDirectory: File? = null
     private val queueLock = java.lang.Object()
     private val processId = "allinone-download"
     private val notificationId = 7301
@@ -209,6 +211,9 @@ class MainActivity : Activity() {
         fun pauseDownload() { pauseCurrentDownload() }
 
         @JavascriptInterface
+        fun cancelDownload() { cancelCurrentDownload() }
+
+        @JavascriptInterface
         fun resumeDownload() {
             synchronized(queueLock) {
                 if (status == "paused") {
@@ -245,8 +250,13 @@ class MainActivity : Activity() {
             return try {
                 val parsed = Uri.parse(uri)
                 val treeValue = getSharedPreferences("download_settings", MODE_PRIVATE).getString("tree_uri", null)
-                if (!treeValue.isNullOrBlank()) DocumentsContract.deleteDocument(contentResolver, parsed)
-                else contentResolver.delete(parsed, null, null) > 0
+                when {
+                    parsed.scheme == "file" -> File(parsed.path ?: return false).delete()
+                    DocumentsContract.isDocumentUri(this@MainActivity, parsed) ->
+                        (DocumentFile.fromSingleUri(this@MainActivity, parsed)?.delete()
+                            ?: DocumentsContract.deleteDocument(contentResolver, parsed))
+                    else -> contentResolver.delete(parsed, null, null) > 0
+                }
             } catch (e: Throwable) { false }
         }
 
@@ -325,6 +335,8 @@ class MainActivity : Activity() {
                     if (!task.has("jobId")) task.put("jobId", java.util.UUID.randomUUID().toString())
                     do {
                         pauseRequested = false
+                        cancelRequested = false
+                        currentJobDirectory = null
                         status = "running"
                         percent = 0
                         code = "starting"
@@ -363,7 +375,9 @@ class MainActivity : Activity() {
             val subs = o.optBoolean("subs")
 
             val job = File(cacheDir, "job_" + o.getString("jobId"))
+            currentJobDirectory = job
             job.mkdirs()
+            if (cancelRequested) throw InterruptedException("Download cancelled")
 
             val req = YoutubeDLRequest(url)
             req.addOption("--no-mtime")
@@ -408,6 +422,7 @@ class MainActivity : Activity() {
             val files = job.walkTopDown().filter { it.isFile }.toList()
             if (files.isEmpty()) throw Exception("No file was created")
             for (f in files) {
+                if (cancelRequested) throw InterruptedException("Download cancelled")
                 saveToDownloads(f, job)
             }
             status = "done"
@@ -416,8 +431,16 @@ class MainActivity : Activity() {
             detail = ""
             updateDownloadNotification("Download complete", 100, false)
             job.deleteRecursively()
+            currentJobDirectory = null
         } catch (e: Throwable) {
-            if (pauseRequested) {
+            if (cancelRequested) {
+                status = "cancelled"
+                code = "cancelled"
+                detail = "Download cancelled"
+                currentJobDirectory?.deleteRecursively()
+                currentJobDirectory = null
+                updateDownloadNotification("Download cancelled", percent, false)
+            } else if (pauseRequested) {
                 status = "paused"
                 code = "paused"
                 detail = "Download paused"
@@ -430,6 +453,27 @@ class MainActivity : Activity() {
                 extra += "]"
                 detail = (e.message ?: e.toString()).takeLast(300) + extra
                 updateDownloadNotification("Download failed", percent, false)
+            }
+        }
+    }
+
+    private fun cancelCurrentDownload() {
+        if (status == "running" || status == "paused") {
+            cancelRequested = true
+            pauseRequested = false
+            val wasPaused = status == "paused"
+            status = "cancelled"
+            code = "cancelled"
+            detail = "Download cancelled"
+            synchronized(queueLock) {
+                resumeRequested = true
+                queueLock.notifyAll()
+            }
+            try { YoutubeDL.getInstance().destroyProcessById(processId) } catch (_: Throwable) { }
+            if (wasPaused) {
+                currentJobDirectory?.deleteRecursively()
+                currentJobDirectory = null
+                updateDownloadNotification("Download cancelled", percent, false)
             }
         }
     }
