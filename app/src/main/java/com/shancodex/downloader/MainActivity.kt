@@ -493,7 +493,7 @@ class MainActivity : Activity() {
                     val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
                     while (cursor.moveToNext()) {
                         val item = JSONObject()
-                        val uri = Uri.withAppendedPath(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cursor.getLong(idCol).toString())
+                        val uri = Uri.withAppendedPath(MediaStore.Files.getContentUri("external"), cursor.getLong(idCol).toString())
                         item.put("name", cursor.getString(nameCol) ?: "Download")
                         item.put("uri", uri.toString())
                         item.put("mime", cursor.getString(mimeCol) ?: "*/*")
