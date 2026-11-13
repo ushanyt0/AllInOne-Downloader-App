@@ -297,6 +297,8 @@ class MainActivity : Activity() {
             }
         }
         if (shouldStartWorker) {
+            val serviceIntent = Intent(this, DownloadKeepAliveService::class.java)
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(serviceIntent) else startService(serviceIntent)
             Thread {
                 while (true) {
                     val next = synchronized(this) {
@@ -329,6 +331,7 @@ class MainActivity : Activity() {
                     if (downloadQueue.isNotEmpty()) Thread.sleep(1200)
                 }
                 updateDownloadNotification("All downloads finished", 100, false)
+                stopService(Intent(this@MainActivity, DownloadKeepAliveService::class.java))
             }.start()
         }
     }
