@@ -1,6 +1,11 @@
 package com.shancodex.downloader
 
 import android.app.Activity
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.provider.DocumentsContract
 import android.content.ContentValues
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -26,6 +31,12 @@ class MainActivity : Activity() {
     private val folderPickerRequest = 4817
     private val downloadQueue = LinkedBlockingQueue<String>()
     @Volatile private var queueWorkerActive = false
+    @Volatile private var pauseRequested = false
+    @Volatile private var resumeRequested = false
+    private val queueLock = java.lang.Object()
+    private val processId = "allinone-download"
+    private val notificationId = 7301
+    private val notificationChannel = "download_status"
 
     @Volatile private var status = "idle"
     @Volatile private var percent = 0
@@ -58,6 +69,8 @@ class MainActivity : Activity() {
         web.addJavascriptInterface(Bridge(), "Android")
         setContentView(web)
         web.loadUrl("file:///android_asset/index.html")
+        createDownloadNotificationChannel()
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7302)
         Thread {
             try {
                 YoutubeDL.getInstance().init(applicationContext)
@@ -106,6 +119,7 @@ class MainActivity : Activity() {
             val sz = sizeRe.find(l)
             if (sz != null) sizeTxt = sz.groupValues[1].replace(" ", "")
             etaTxt = if (eta >= 0) fmtEta(eta) else ""
+            updateDownloadNotification("Downloading", percent, true)
         } else {
             logLine = l.take(160)
         }
@@ -310,7 +324,7 @@ class MainActivity : Activity() {
                 req.addOption("--sub-langs", "en")
             }
 
-            YoutubeDL.getInstance().execute(req, null) { progress, eta, line ->
+            YoutubeDL.getInstance().execute(req, processId) { progress, eta, line ->
                 val pr = progress.toInt()
                 if (pr >= 0) {
                     percent = pr.coerceIn(0, 100)
