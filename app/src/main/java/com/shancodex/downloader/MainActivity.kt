@@ -237,7 +237,8 @@ class MainActivity : Activity() {
                     }
                 } finally {
                     queueWorkerActive = false
-                    if (downloadQueue.isNotEmpty()) enqueueDownload(downloadQueue.poll() ?: return)
+                    val leftover = downloadQueue.poll()
+                    if (leftover != null) enqueueDownload(leftover)
                 }
             }.start()
         }
