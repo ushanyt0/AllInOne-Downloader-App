@@ -455,19 +455,24 @@ class MainActivity : Activity() {
         try {
             if (!treeValue.isNullOrBlank()) {
                 val tree = DocumentFile.fromTreeUri(this, Uri.parse(treeValue))
-                tree?.listFiles()?.filter { it.isFile }?.forEach { file ->
-                    val item = JSONObject()
-                    item.put("name", file.name ?: "Download")
-                    item.put("uri", file.uri.toString())
-                    item.put("mime", file.type ?: "*/*")
-                    item.put("size", file.length())
-                    result.put(item)
+                fun addFolder(folder: DocumentFile) {
+                    folder.listFiles().forEach { file ->
+                        if (file.isDirectory) addFolder(file) else if (file.isFile) {
+                            val item = JSONObject()
+                            item.put("name", file.name ?: "Download")
+                            item.put("uri", file.uri.toString())
+                            item.put("mime", file.type ?: "*/*")
+                            item.put("size", file.length())
+                            result.put(item)
+                        }
+                    }
                 }
+                if (tree != null) addFolder(tree)
             } else if (Build.VERSION.SDK_INT >= 29) {
                 val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME,
                     MediaStore.MediaColumns.MIME_TYPE, MediaStore.MediaColumns.SIZE)
                 val selection = MediaStore.MediaColumns.RELATIVE_PATH + "=?"
-                contentResolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection,
+                contentResolver.query(MediaStore.Files.getContentUri("external"), projection, selection,
                     arrayOf(Environment.DIRECTORY_DOWNLOADS + "/AllInOneDownloader/"), MediaStore.MediaColumns.DATE_ADDED + " DESC")?.use { cursor ->
                     val idCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
                     val nameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
