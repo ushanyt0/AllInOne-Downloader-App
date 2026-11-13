@@ -162,7 +162,7 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun queueCount(): Int {
-            return downloadQueue.size + if (queueWorkerActive && status == "running") 1 else 0
+            return downloadQueue.size + if (queueWorkerActive) 1 else 0
         }
 
         @JavascriptInterface
@@ -216,29 +216,37 @@ class MainActivity : Activity() {
         }
     }
 
-    @Synchronized
     private fun enqueueDownload(json: String) {
-        downloadQueue.offer(json)
-        if (!queueWorkerActive) {
-            queueWorkerActive = true
+        var shouldStartWorker = false
+        synchronized(this) {
+            downloadQueue.offer(json)
+            if (!queueWorkerActive) {
+                queueWorkerActive = true
+                shouldStartWorker = true
+            }
+        }
+        if (shouldStartWorker) {
             Thread {
-                try {
-                    while (true) {
-                        val next = downloadQueue.poll() ?: break
-                        status = "running"
-                        percent = 0
-                        code = "starting"
-                        detail = ""
-                        spd = ""
-                        etaTxt = ""
-                        sizeTxt = ""
-                        logLine = ""
-                        runDownload(JSONObject(next))
-                    }
-                } finally {
-                    queueWorkerActive = false
-                    val leftover = downloadQueue.poll()
-                    if (leftover != null) enqueueDownload(leftover)
+                while (true) {
+                    val next = synchronized(this) {
+                        val item = downloadQueue.poll()
+                        if (item == null) queueWorkerActive = false
+                        item
+                    } ?: break
+
+                    status = "running"
+                    percent = 0
+                    code = "starting"
+                    detail = ""
+                    spd = ""
+                    etaTxt = ""
+                    sizeTxt = ""
+                    logLine = ""
+                    runDownload(JSONObject(next))
+
+                    // Keep the completed state visible long enough for the WebView
+                    // to record this item in local download history before the next starts.
+                    if (downloadQueue.isNotEmpty()) Thread.sleep(1200)
                 }
             }.start()
         }
