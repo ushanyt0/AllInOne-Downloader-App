@@ -345,12 +345,12 @@ class MainActivity : Activity() {
             val playlist = o.optBoolean("playlist")
             val subs = o.optBoolean("subs")
 
-            cacheDir.listFiles()?.filter { it.name.startsWith("job_") }?.forEach { it.deleteRecursively() }
-            val job = File(cacheDir, "job_" + System.currentTimeMillis())
+            val job = File(cacheDir, "job_" + o.getString("jobId"))
             job.mkdirs()
 
             val req = YoutubeDLRequest(url)
             req.addOption("--no-mtime")
+            req.addOption("--continue")
             req.addOption("--socket-timeout", "30")
             if (playlist) {
                 req.addOption("-o", job.absolutePath + "/%(playlist_title).60s/%(playlist_index)s - %(title).100s.%(ext)s")
@@ -397,14 +397,53 @@ class MainActivity : Activity() {
             percent = 100
             code = "done"
             detail = ""
+            updateDownloadNotification("Download complete", 100, false)
+            job.deleteRecursively()
         } catch (e: Throwable) {
-            status = "error"
-            code = "error"
-            var extra = "  [yt-dlp " + engineVersion()
-            if (updateError.isNotEmpty()) extra += "; update failed: " + updateError.take(80)
-            extra += "]"
-            detail = (e.message ?: e.toString()).takeLast(300) + extra
+            if (pauseRequested) {
+                status = "paused"
+                code = "paused"
+                detail = "Download paused"
+                updateDownloadNotification("Download paused", percent, false)
+            } else {
+                status = "error"
+                code = "error"
+                var extra = "  [yt-dlp " + engineVersion()
+                if (updateError.isNotEmpty()) extra += "; update failed: " + updateError.take(80)
+                extra += "]"
+                detail = (e.message ?: e.toString()).takeLast(300) + extra
+                updateDownloadNotification("Download failed", percent, false)
+            }
         }
+    }
+
+    private fun pauseCurrentDownload() {
+        if (status == "running" && code == "downloading") {
+            pauseRequested = true
+            try { YoutubeDL.getInstance().destroyProcessById(processId) }
+            catch (_: Throwable) { status = "paused"; code = "paused" }
+        }
+    }
+
+    private fun createDownloadNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= 26) {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(NotificationChannel(notificationChannel, "Download status", NotificationManager.IMPORTANCE_LOW))
+        }
+    }
+
+    private fun updateDownloadNotification(title: String, progressValue: Int, ongoing: Boolean) {
+        try {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, notificationChannel) else Notification.Builder(this)
+            builder.setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentTitle("All-in-One Downloader")
+                .setContentText(title)
+                .setOngoing(ongoing)
+                .setOnlyAlertOnce(true)
+            if (ongoing) builder.setProgress(100, progressValue.coerceIn(0, 100), false)
+            manager.notify(notificationId, builder.build())
+        } catch (_: Throwable) { }
     }
 
     private fun saveToDownloads(f: File, root: File) {
