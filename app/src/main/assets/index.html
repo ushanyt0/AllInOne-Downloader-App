@@ -114,6 +114,8 @@ body.light .quality-option small{color:#64748b}
 .queue-control{padding:9px 11px;border:1px solid #ffffff26;border-radius:10px;background:#ffffff12;color:inherit;font-weight:600}
 body.light .queue-btn,body.light .queue-control{border-color:#cbd5e1;background:#fff}
 body.light .queue-count{color:#6d28d9}
+.clipboard-hint{display:none;margin:6px 0;padding:10px 12px;border:1px solid #8b5cf666;border-radius:12px;background:#8b5cf622;color:inherit;font-size:13px}
+.clipboard-hint button{margin-left:8px;border:0;border-radius:8px;padding:6px 10px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);color:#fff;font-weight:600}
 .downloads-overlay{position:fixed;inset:0;z-index:125;background:#020617bd;backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;padding:16px}
 .downloads-overlay.open{display:flex}
 .downloads-panel{width:100%;max-width:460px;max-height:88vh;overflow:auto;padding:18px;border:1px solid #ffffff30;border-radius:22px;background:linear-gradient(145deg,#ffffff20,#111827ed);box-shadow:0 24px 80px #0008}
@@ -151,6 +153,7 @@ body.light .download-actions button{background:#f1f5f9;border-color:#cbd5e1}
 <button class="tab" id="p_tiktok" onclick="setPlat('tiktok')">TikTok</button>
 </div>
 <input type="text" id="url" inputmode="url" onfocus="this.select()" value="https://youtu.be/gwov8azLd2Q?si=0O47vcjsMwJBmP9_">
+<div class="clipboard-hint" id="clipboardHint"><span id="clipboardHintText">Link found in clipboard</span><button onclick="pasteSuggestedLink()">Use link</button></div>
 <div style="display:flex;gap:8px;margin:6px 0"><button class="theme-btn" id="pasteBtn" onclick="pasteFromClipboard()" style="flex:1">Paste link</button><button class="theme-btn" id="previewBtn" onclick="startPreview()" style="flex:1">Preview link</button></div>
 <div id="previewBox" style="display:none;margin:8px 0;padding:10px;border:1px solid #ffffff22;border-radius:12px;gap:10px;align-items:center">
 <img id="previewThumb" alt="Video thumbnail" style="width:112px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:none">
@@ -217,10 +220,10 @@ ta:{sub:"தளத்தைத் தேர்ந்தெடுத்து, �
 hi:{sub:"प्लेटफ़ॉर्म चुनें, लिंक पेस्ट करें और क्वालिटी चुनें।",auto:"सभी साइट",note:"केवल वही कंटेंट डाउनलोड करें जिसका आपको अधिकार है।",video:"वीडियो",audio:"ऑडियो (MP3)",best:"सबसे अच्छी उपलब्ध",high:"उच्च",med:"मध्यम",low:"कम",playlist:"पूरी प्लेलिस्ट डाउनलोड करें",subs:"सबटाइटल (English)",go:"डाउनलोड करें",spdL:"गति",etaL:"बचा समय",sizeL:"आकार",ready:"तैयार",starting:"शुरू हो रहा है...",downloading:"डाउनलोड हो रहा है...",processing:"प्रोसेस हो रहा है...",done:"हो गया! Download folder देखें",error:"त्रुटि",busy:"एक डाउनलोड पहले से चल रहा है",empty:"सही लिंक पेस्ट करें",wrongsite:"यह लिंक चुने हुए प्लेटफ़ॉर्म से मेल नहीं खाता",nobridge:"डाउनलोड इंजन जुड़ा नहीं है",settingsTitle:"सेटिंग्स",settingsSub:"अपने डाउनलोडर को अपनी पसंद के अनुसार बनाएं",languageLabel:"भाषा",languageHint:"ऐप की भाषा चुनें",locationLabel:"डाउनलोड स्थान",chooseFolder:"फ़ोल्डर चुनें",themeLabel:"दिखावट",themeHint:"डार्क या लाइट थीम",historyLabel:"डाउनलोड इतिहास",historyHint:"सहेजे गए डाउनलोड रिकॉर्ड हटाएं",clearHistory:"इतिहास साफ़ करें",historyTitle:"डाउनलोड इतिहास",historyEmpty:"अभी तक कोई डाउनलोड नहीं।",folderUpdated:"डाउनलोड फ़ोल्डर अपडेट हुआ",folderDefault:"Download/AllInOneDownloader",themeDark:"डार्क",themeLight:"लाइट",pasteLink:"लिंक पेस्ट करें",qualityLabel:"वीडियो गुणवत्ता",audioQualityLabel:"ऑडियो गुणवत्ता",qualityTitle:"गुणवत्ता चुनें",qualityCaption:"डाउनलोड के लिए गुणवत्ता चुनें",addQueue:"＋ कतार में जोड़ें",queueLabel:"कतार",queued:"कतार में जोड़ा गया",queueEmpty:"कतार खाली है"}
 };
 var DLT={
-en:{myDownloads:"My Downloads",noFiles:"No files found in the selected download folder.",share:"Share",delete:"Delete",refresh:"Refresh",confirmDelete:"Delete this file?",pause:"Pause",resume:"Resume",paused:"Paused",resumeHint:"Resume the current download",pauseHint:"Pause the current download"},
-si:{myDownloads:"මගේ Downloads",noFiles:"තෝරාගත් Download Folder එකේ ගොනු නැහැ.",share:"Share",delete:"මකන්න",refresh:"නැවත බලන්න",confirmDelete:"මේ ගොනුව මකන්නද?",pause:"Pause",resume:"Resume",paused:"නවතා ඇත",resumeHint:"Download එක නැවත අරඹන්න",pauseHint:"Download එක තාවකාලිකව නවත්වන්න"},
-ta:{myDownloads:"என் பதிவிறக்கங்கள்",noFiles:"தேர்ந்தெடுத்த கோப்புறையில் கோப்புகள் இல்லை.",share:"பகிர்",delete:"நீக்கு",refresh:"புதுப்பி",confirmDelete:"இந்த கோப்பை நீக்கவா?",pause:"இடைநிறுத்து",resume:"தொடர்",paused:"இடைநிறுத்தப்பட்டது",resumeHint:"பதிவிறக்கத்தைத் தொடரவும்",pauseHint:"பதிவிறக்கத்தை இடைநிறுத்தவும்"},
-hi:{myDownloads:"मेरे डाउनलोड",noFiles:"चुने गए डाउनलोड फ़ोल्डर में कोई फ़ाइल नहीं है।",share:"शेयर",delete:"हटाएं",refresh:"रीफ़्रेश",confirmDelete:"क्या यह फ़ाइल हटानी है?",pause:"रोकें",resume:"फिर शुरू करें",paused:"रुका हुआ",resumeHint:"डाउनलोड फिर शुरू करें",pauseHint:"डाउनलोड रोकें"}
+en:{clipboardFound:"A video link is on your clipboard",useLink:"Use link",myDownloads:"My Downloads",noFiles:"No files found in the selected download folder.",share:"Share",delete:"Delete",refresh:"Refresh",confirmDelete:"Delete this file?",pause:"Pause",resume:"Resume",paused:"Paused",resumeHint:"Resume the current download",pauseHint:"Pause the current download"},
+si:{clipboardFound:"Clipboard එකේ video link එකක් තියෙනවා",useLink:"Link එක ගන්න",myDownloads:"මගේ Downloads",noFiles:"තෝරාගත් Download Folder එකේ ගොනු නැහැ.",share:"Share",delete:"මකන්න",refresh:"නැවත බලන්න",confirmDelete:"මේ ගොනුව මකන්නද?",pause:"Pause",resume:"Resume",paused:"නවතා ඇත",resumeHint:"Download එක නැවත අරඹන්න",pauseHint:"Download එක තාවකාලිකව නවත්වන්න"},
+ta:{clipboardFound:"கிளிப்போர்டில் வீடியோ இணைப்பு உள்ளது",useLink:"இணைப்பைப் பயன்படுத்து",myDownloads:"என் பதிவிறக்கங்கள்",noFiles:"தேர்ந்தெடுத்த கோப்புறையில் கோப்புகள் இல்லை.",share:"பகிர்",delete:"நீக்கு",refresh:"புதுப்பி",confirmDelete:"இந்த கோப்பை நீக்கவா?",pause:"இடைநிறுத்து",resume:"தொடர்",paused:"இடைநிறுத்தப்பட்டது",resumeHint:"பதிவிறக்கத்தைத் தொடரவும்",pauseHint:"பதிவிறக்கத்தை இடைநிறுத்தவும்"},
+hi:{clipboardFound:"क्लिपबोर्ड में वीडियो लिंक है",useLink:"लिंक इस्तेमाल करें",myDownloads:"मेरे डाउनलोड",noFiles:"चुने गए डाउनलोड फ़ोल्डर में कोई फ़ाइल नहीं है।",share:"शेयर",delete:"हटाएं",refresh:"रीफ़्रेश",confirmDelete:"क्या यह फ़ाइल हटानी है?",pause:"रोकें",resume:"फिर शुरू करें",paused:"रुका हुआ",resumeHint:"डाउनलोड फिर शुरू करें",pauseHint:"डाउनलोड रोकें"}
 };
 var EXAMPLE="https://youtu.be/gwov8azLd2Q?si=0O47vcjsMwJBmP9_";
 var P={auto:[],youtube:["youtube.com","youtu.be"],facebook:["facebook.com","fb.watch","fb.com"],instagram:["instagram.com","instagr.am"],tiktok:["tiktok.com"]};
@@ -322,6 +325,8 @@ function apply(){
   var t=L[lang];
   var paste=document.getElementById("pasteBtn");if(paste)paste.textContent=t.pasteLink;
   var dtitle=document.getElementById("downloadsTitle");if(dtitle)dtitle.textContent=DLT[lang].myDownloads;
+  var ch=document.getElementById("clipboardHintText");if(ch)ch.textContent=DLT[lang].clipboardFound;
+  var cb=document.querySelector("#clipboardHint button");if(cb)cb.textContent=DLT[lang].useLink;
   var pause=document.getElementById("pauseBtn"),resume=document.getElementById("resumeBtn");
   if(pause)pause.textContent=DLT[lang].pause;if(resume)resume.textContent=DLT[lang].resume;
   var els=document.querySelectorAll("[data-k]");
@@ -348,6 +353,18 @@ apply();
 loadTheme();
 refreshDownloadLocation();
 setPlat("auto");
+var suggestedClipboardLink="";
+function checkClipboardSuggestion(){
+ if(!window.Android)return;
+ var value="";try{value=Android.getClipboardText()||"";}catch(e){}
+ value=value.trim();
+ var hint=document.getElementById("clipboardHint");
+ if(/^https?:\/\//i.test(value)&&value!==document.getElementById("url").value.trim()){
+  suggestedClipboardLink=value;document.getElementById("clipboardHintText").textContent=DLT[lang].clipboardFound;
+  var btn=hint.querySelector("button");btn.textContent=DLT[lang].useLink;hint.style.display="block";
+ }else{hint.style.display="none";suggestedClipboardLink="";}
+}
+function pasteSuggestedLink(){if(suggestedClipboardLink){document.getElementById("url").value=suggestedClipboardLink;document.getElementById("clipboardHint").style.display="none";}}
 function openDownloads(){document.getElementById("downloadsOverlay").classList.add("open");refreshDownloads();}
 function closeDownloads(e){if(!e||e.target===document.getElementById("downloadsOverlay"))document.getElementById("downloadsOverlay").classList.remove("open");}
 function showDownloadMessage(message){document.getElementById("downloadsMessage").textContent=message;}
