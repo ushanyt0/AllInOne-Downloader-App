@@ -265,6 +265,7 @@ function addToQueue(){
 }
 function setMode(m){
   mode=m;
+  var qLabel=document.querySelector("[data-k=qualityLabel]");if(qLabel)qLabel.textContent=(lang==="si"?(m==="video"?"Video Quality":"Audio Quality"):(m==="video"?"Video quality":"Audio quality"));
   document.getElementById("m_video").className=(m==="video")?"on":"";
   document.getElementById("m_audio").className=(m==="audio")?"on":"";
   fill();
