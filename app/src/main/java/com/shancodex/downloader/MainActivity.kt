@@ -17,10 +17,13 @@ import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.LinkedBlockingQueue
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private val folderPickerRequest = 4817
+    private val downloadQueue = LinkedBlockingQueue<String>()
+    @Volatile private var queueWorkerActive = false
 
     @Volatile private var status = "idle"
     @Volatile private var percent = 0
@@ -149,16 +152,17 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun start(json: String) {
-            if (status == "running") return
-            status = "running"
-            percent = 0
-            code = "starting"
-            detail = ""
-            spd = ""
-            etaTxt = ""
-            sizeTxt = ""
-            logLine = ""
-            Thread { runDownload(JSONObject(json)) }.start()
+            enqueueDownload(json)
+        }
+
+        @JavascriptInterface
+        fun enqueue(json: String) {
+            enqueueDownload(json)
+        }
+
+        @JavascriptInterface
+        fun queueCount(): Int {
+            return downloadQueue.size + if (queueWorkerActive && status == "running") 1 else 0
         }
 
         @JavascriptInterface
@@ -209,6 +213,33 @@ class MainActivity : Activity() {
             o.put("size", sizeTxt)
             o.put("log", logLine)
             return o.toString()
+        }
+    }
+
+    @Synchronized
+    private fun enqueueDownload(json: String) {
+        downloadQueue.offer(json)
+        if (!queueWorkerActive) {
+            queueWorkerActive = true
+            Thread {
+                try {
+                    while (true) {
+                        val next = downloadQueue.poll() ?: break
+                        status = "running"
+                        percent = 0
+                        code = "starting"
+                        detail = ""
+                        spd = ""
+                        etaTxt = ""
+                        sizeTxt = ""
+                        logLine = ""
+                        runDownload(JSONObject(next))
+                    }
+                } finally {
+                    queueWorkerActive = false
+                    if (downloadQueue.isNotEmpty()) enqueueDownload(downloadQueue.poll() ?: return)
+                }
+            }.start()
         }
     }
 
