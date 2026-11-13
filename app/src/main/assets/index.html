@@ -210,7 +210,8 @@ var plat="auto";
 var last={code:"ready",percent:0,status:"idle",detail:""};
 var timer=null;
 var previewTimer=null;
-var historySaved=false;
+var pendingHistory=[];
+var lastProgressStatus="";
 function toggleTheme(){var light=!document.body.classList.contains("light");document.body.classList.toggle("light",light);try{localStorage.setItem("theme",light?"light":"dark");}catch(e){}var b=document.getElementById("themeSettingBtn");if(b)b.textContent=light?L[lang].themeLight:L[lang].themeDark;}
 function loadTheme(){var t="dark";try{t=localStorage.getItem("theme")||"dark";}catch(e){}document.body.classList.toggle("light",t==="light");var b=document.getElementById("themeSettingBtn");if(b)b.textContent=t==="light"?L[lang].themeLight:L[lang].themeDark;}
 function openSettings(){document.getElementById("settingsOverlay").classList.add("open");refreshDownloadLocation();}
@@ -220,7 +221,7 @@ function onDownloadLocationChanged(path){document.getElementById("locationPath")
 function chooseDownloadLocation(){if(window.Android){Android.chooseDownloadFolder();}else{document.getElementById("settingsMsg").textContent=L[lang].nobridge;}}
 function clearHistory(){try{localStorage.removeItem("downloadHistory");}catch(e){}renderHistory();document.getElementById("settingsMsg").textContent=L[lang].historyEmpty;}
 function renderHistory(){var h=[];try{h=JSON.parse(localStorage.getItem("downloadHistory")||"[]");}catch(e){}var box=document.getElementById("historyList");if(!h.length){box.className="history-empty";box.textContent=L[lang].historyEmpty;return;}box.className="";box.innerHTML="";h.forEach(function(x){var d=document.createElement("div");d.className="history-item";var b=document.createElement("b");b.textContent=x.mode.toUpperCase()+" • "+x.quality+" • "+x.platform;var a=document.createElement("div");a.textContent=x.url;var t=document.createElement("div");t.textContent=x.date;d.appendChild(b);d.appendChild(a);d.appendChild(t);box.appendChild(d);});}
-function saveHistory(){if(historySaved)return;historySaved=true;var h=[];try{h=JSON.parse(localStorage.getItem("downloadHistory")||"[]");}catch(e){}h.unshift({url:document.getElementById("url").value.trim(),platform:plat,mode:mode,quality:document.getElementById("quality").value,date:new Date().toLocaleString()});try{localStorage.setItem("downloadHistory",JSON.stringify(h.slice(0,30)));}catch(e){}renderHistory();}
+function saveHistory(entry){if(!entry)return;var h=[];try{h=JSON.parse(localStorage.getItem("downloadHistory")||"[]");}catch(e){}h.unshift(entry);try{localStorage.setItem("downloadHistory",JSON.stringify(h.slice(0,30)));}catch(e){}renderHistory();}
 function fill(){
   var t=L[lang];
   var q=document.getElementById("quality");
@@ -258,7 +259,7 @@ function addToQueue(){
   if(dom.length&&!dom.some(function(d){return low.indexOf(d)>-1;})){show({code:"wrongsite",percent:0,status:"idle",detail:""});return;}
   if(!window.Android){show({code:"nobridge",percent:0,status:"idle",detail:""});return;}
   var yt=(plat==="auto"||plat==="youtube");
-  Android.enqueue(JSON.stringify({url:u,mode:mode,quality:document.getElementById("quality").value,playlist:yt&&document.getElementById("playlist").checked,subs:yt&&document.getElementById("subs").checked}));
+  var task={url:u,mode:mode,quality:document.getElementById("quality").value,playlist:yt&&document.getElementById("playlist").checked,subs:yt&&document.getElementById("subs").checked};pendingHistory.push({url:u,platform:plat,mode:mode,quality:task.quality,date:new Date().toLocaleString()});Android.enqueue(JSON.stringify(task));
   document.getElementById("queueCount").textContent=L[lang].queueLabel+": "+Android.queueCount();
   document.getElementById("msg").textContent=L[lang].queued;
   clearInterval(timer);timer=setInterval(poll,1000);
@@ -367,19 +368,16 @@ function go(){
     return;
   }
   var yt=(plat==="auto"||plat==="youtube");
-  Android.start(JSON.stringify({
-    url:u,
-    mode:mode,
-    quality:document.getElementById("quality").value,
-    playlist:yt&&document.getElementById("playlist").checked,
-    subs:yt&&document.getElementById("subs").checked}));
+  var task={url:u,mode:mode,quality:document.getElementById("quality").value,playlist:yt&&document.getElementById("playlist").checked,subs:yt&&document.getElementById("subs").checked};pendingHistory.push({url:u,platform:plat,mode:mode,quality:task.quality,date:new Date().toLocaleString()});Android.start(JSON.stringify(task));
   clearInterval(timer);
   timer=setInterval(poll,1000);
 }
 function poll(){
   var s=JSON.parse(Android.progress());
   show(s);
-  if(s.status==="done"){saveHistory();}
+  if(s.status==="done"&&lastProgressStatus!=="done"){saveHistory(pendingHistory.shift());}
+  if(s.status==="error"&&lastProgressStatus!=="error"){pendingHistory.shift();}
+  lastProgressStatus=s.status;
   var count=Android.queueCount();
   document.getElementById("queueCount").textContent=L[lang].queueLabel+": "+count;
   if(s.status!=="running"&&count===0){clearInterval(timer);}
