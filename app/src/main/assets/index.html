@@ -43,6 +43,29 @@ label.c input{width:18px;height:18px;margin:0}
 @keyframes glow{0%,100%{box-shadow:0 0 30px #06b6d466}50%{box-shadow:0 0 70px #8b5cf6aa}}
 @keyframes up{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes out{to{opacity:0;visibility:hidden}}
+
+/* Version 0.3: theme support */
+body.light{color:#172033;background:radial-gradient(900px 500px at 0% -10%,#c4b5fd88,transparent),radial-gradient(800px 500px at 100% 0%,#67e8f988,transparent),#f3f6fc}
+body.light .card{background:#ffffffd9;border-color:#cbd5e1}
+body.light .sub,body.light label.c{color:#475569}
+body.light input[type=text],body.light select,body.light .seg,body.light .stat{background:#fff;color:#172033;border-color:#cbd5e1}
+body.light .tab{background:#e2e8f0;color:#334155;border-color:#cbd5e1}
+body.light .tab.on{background:linear-gradient(135deg,#8b5cf6,#06b6d4);color:#fff}
+body.light .seg button{color:#64748b}
+body.light .seg button.on{color:#fff}
+body.light .stat b{color:#172033}
+body.light #msg{color:#334155}
+body.light .note,body.light .foot{color:#64748b}
+body.light .log{color:#64748b}
+.theme-btn{border:1px solid #ffffff22;background:#ffffff0f;color:inherit;border-radius:10px;padding:8px 10px;font-size:13px}
+.tools-row{display:flex;gap:8px;align-items:center}
+.history{margin-top:18px;border-top:1px solid #ffffff22;padding-top:14px}
+.history h2{font-size:17px;margin:0 0 10px}
+.history-item{padding:10px;margin:8px 0;border:1px solid #ffffff1c;border-radius:12px;background:#0b0f1a66;overflow-wrap:anywhere;font-size:12px}
+.history-item b{display:block;font-size:13px;margin-bottom:4px}
+.history-empty{font-size:13px;color:#9aa4b8}
+body.light .history-item{background:#fff;border-color:#cbd5e1}
+body.light .history-empty{color:#64748b}
 </style></head><body>
 <div id="splash">
 <img id="sicon" src="file:///android_res/mipmap/ic_launcher.png" onerror="this.style.display='none'">
@@ -52,12 +75,13 @@ label.c input{width:18px;height:18px;margin:0}
 <div class="wrap">
 <div class="top">
 <div class="logo"><i>⬇</i><span>All-in-One</span></div>
-<select id="lang" onchange="setLang(this.value)">
+<div class="tools-row"><button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☀️</button><select id="lang" onchange="setLang(this.value)">
 <option value="en">English</option>
 <option value="si">සිංහල</option>
 <option value="ta">தமிழ்</option>
 <option value="hi">हिन्दी</option>
 </select>
+</div>
 </div>
 <div class="card">
 <h1>All-in-One Downloader</h1>
@@ -70,6 +94,11 @@ label.c input{width:18px;height:18px;margin:0}
 <button class="tab" id="p_tiktok" onclick="setPlat('tiktok')">TikTok</button>
 </div>
 <input type="text" id="url" inputmode="url" onfocus="this.select()" value="https://youtu.be/gwov8azLd2Q?si=0O47vcjsMwJBmP9_">
+<button class="theme-btn" id="previewBtn" onclick="startPreview()" style="width:100%;margin:6px 0">Preview link</button>
+<div id="previewBox" style="display:none;margin:8px 0;padding:10px;border:1px solid #ffffff22;border-radius:12px;gap:10px;align-items:center">
+<img id="previewThumb" alt="Video thumbnail" style="width:112px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:none">
+<div style="min-width:0"><b id="previewTitle" style="display:block;font-size:14px;overflow-wrap:anywhere"></b><small id="previewMeta" style="color:#9aa4b8"></small></div>
+</div>
 <div class="seg">
 <button id="m_video" onclick="setMode('video')" data-k="video"></button>
 <button id="m_audio" onclick="setMode('audio')" data-k="audio"></button>
@@ -89,6 +118,7 @@ label.c input{width:18px;height:18px;margin:0}
 </div>
 <div class="log" id="log"></div>
 <div class="note" data-k="note"></div>
+<div class="history"><h2 id="historyTitle">Download History</h2><div id="historyList" class="history-empty">No downloads yet.</div></div>
 </div>
 <div class="foot">Powered by <b>Shan codex</b></div>
 </div>
@@ -109,6 +139,12 @@ var mode="video";
 var plat="auto";
 var last={code:"ready",percent:0,status:"idle",detail:""};
 var timer=null;
+var previewTimer=null;
+var historySaved=false;
+function toggleTheme(){var light=!document.body.classList.contains("light");document.body.classList.toggle("light",light);try{localStorage.setItem("theme",light?"light":"dark");}catch(e){}document.getElementById("themeBtn").textContent=light?"🌙":"☀️";}
+function loadTheme(){var t="dark";try{t=localStorage.getItem("theme")||"dark";}catch(e){}document.body.classList.toggle("light",t==="light");document.getElementById("themeBtn").textContent=t==="light"?"🌙":"☀️";}
+function renderHistory(){var h=[];try{h=JSON.parse(localStorage.getItem("downloadHistory")||"[]");}catch(e){}var box=document.getElementById("historyList");if(!h.length){box.className="history-empty";box.textContent="No downloads yet.";return;}box.className="";box.innerHTML="";h.forEach(function(x){var d=document.createElement("div");d.className="history-item";var b=document.createElement("b");b.textContent=x.mode.toUpperCase()+" • "+x.quality+" • "+x.platform;var a=document.createElement("div");a.textContent=x.url;var t=document.createElement("div");t.textContent=x.date;d.appendChild(b);d.appendChild(a);d.appendChild(t);box.appendChild(d);});}
+function saveHistory(){if(historySaved)return;historySaved=true;var h=[];try{h=JSON.parse(localStorage.getItem("downloadHistory")||"[]");}catch(e){}h.unshift({url:document.getElementById("url").value.trim(),platform:plat,mode:mode,quality:document.getElementById("quality").value,date:new Date().toLocaleString()});try{localStorage.setItem("downloadHistory",JSON.stringify(h.slice(0,30)));}catch(e){}renderHistory();}
 function fill(){
   var t=L[lang];
   var q=document.getElementById("quality");
@@ -171,6 +207,30 @@ function setLang(v){
 document.getElementById("lang").value=lang;
 apply();
 setPlat("auto");
+function startPreview(){
+  var u=document.getElementById("url").value.trim();
+  if(!/^https?:\/\//i.test(u)){document.getElementById("previewBox").style.display="flex";document.getElementById("previewTitle").textContent=L[lang].empty;return;}
+  if(!window.Android){return;}
+  document.getElementById("previewBox").style.display="flex";
+  document.getElementById("previewTitle").textContent="Loading preview...";
+  document.getElementById("previewMeta").textContent="";
+  document.getElementById("previewThumb").style.display="none";
+  Android.preview(u);
+  clearInterval(previewTimer);
+  previewTimer=setInterval(pollPreview,700);
+}
+function pollPreview(){
+  var p=JSON.parse(Android.previewProgress());
+  if(p.status==="done"){
+    document.getElementById("previewTitle").textContent=p.title||"Untitled";
+    document.getElementById("previewMeta").textContent=p.duration?("Duration: "+Math.floor(Number(p.duration)/60)+":"+String(Math.floor(Number(p.duration)%60)).padStart(2,"0")):"";
+    if(p.thumbnail){var im=document.getElementById("previewThumb");im.src=p.thumbnail;im.style.display="block";}
+    clearInterval(previewTimer);
+  }else if(p.status==="error"){
+    document.getElementById("previewTitle").textContent="Preview failed: "+p.error;
+    clearInterval(previewTimer);
+  }
+}
 function go(){
   var u=document.getElementById("url").value.trim();
   var low=u.toLowerCase();
@@ -206,6 +266,7 @@ function go(){
 function poll(){
   var s=JSON.parse(Android.progress());
   show(s);
+  if(s.status==="done"){saveHistory();}
   if(s.status!=="running"){clearInterval(timer);}
 }
 </script></body></html>

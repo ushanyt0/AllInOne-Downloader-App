@@ -29,6 +29,11 @@ class MainActivity : Activity() {
     @Volatile private var ready = false
     @Volatile private var initError: String? = null
     @Volatile private var updateError = ""
+    @Volatile private var previewStatus = "idle"
+    @Volatile private var previewTitle = ""
+    @Volatile private var previewThumbnail = ""
+    @Volatile private var previewDuration = ""
+    @Volatile private var previewError = ""
 
     private val speedRe = Regex("at\\s+~?\\s*([0-9.]+\\s*[KMGT]?i?B/s)")
     private val sizeRe = Regex("of\\s+~?\\s*([0-9.]+\\s*[KMGT]?i?B)")
@@ -110,6 +115,42 @@ class MainActivity : Activity() {
             sizeTxt = ""
             logLine = ""
             Thread { runDownload(JSONObject(json)) }.start()
+        }
+
+        @JavascriptInterface
+        fun preview(url: String) {
+            if (status == "running" || previewStatus == "running") return
+            previewStatus = "running"
+            previewTitle = ""
+            previewThumbnail = ""
+            previewDuration = ""
+            previewError = ""
+            Thread {
+                try {
+                    while (!ready && initError == null) Thread.sleep(300)
+                    val ie = initError
+                    if (ie != null) throw Exception("Engine init failed: " + ie)
+                    val info = YoutubeDL.getInstance().getInfo(url)
+                    previewTitle = info.title ?: "Untitled"
+                    previewThumbnail = info.thumbnail ?: ""
+                    previewDuration = info.duration?.toString() ?: ""
+                    previewStatus = "done"
+                } catch (e: Throwable) {
+                    previewError = (e.message ?: e.toString()).take(220)
+                    previewStatus = "error"
+                }
+            }.start()
+        }
+
+        @JavascriptInterface
+        fun previewProgress(): String {
+            val o = JSONObject()
+            o.put("status", previewStatus)
+            o.put("title", previewTitle)
+            o.put("thumbnail", previewThumbnail)
+            o.put("duration", previewDuration)
+            o.put("error", previewError)
+            return o.toString()
         }
 
         @JavascriptInterface
