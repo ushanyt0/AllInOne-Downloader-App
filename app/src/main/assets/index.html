@@ -229,6 +229,7 @@ function go(){
 function poll(){
   var s=JSON.parse(Android.progress());
   show(s);
+  if(s.status==="done"){saveHistory();}
   if(s.status!=="running"){clearInterval(timer);}
 }
 </script></body></html>
