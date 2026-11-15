@@ -37,6 +37,7 @@ class MainActivity : Activity() {
     @Volatile private var cancelRequested = false
     @Volatile private var currentJobDirectory: File? = null
     private val queueLock = java.lang.Object()
+    private val engineLock = java.lang.Object()
     private val processId = "allinone-download"
     private val notificationId = 7301
     private val notificationChannel = "download_status"
@@ -83,8 +84,17 @@ class MainActivity : Activity() {
             try {
                 YoutubeDL.getInstance().init(applicationContext)
                 FFmpeg.getInstance().init(applicationContext)
-                updateEngine()
                 ready = true
+                Thread {
+                    try {
+                        Thread.sleep(30000)
+                        if (status == "idle" && previewStatus != "running" && !queueWorkerActive) {
+                            synchronized(engineLock) {
+                                if (status == "idle" && previewStatus != "running" && !queueWorkerActive) updateEngine()
+                            }
+                        }
+                    } catch (_: InterruptedException) { }
+                }.start()
             } catch (e: Throwable) {
                 initError = e.message ?: e.toString()
             }
@@ -275,10 +285,12 @@ class MainActivity : Activity() {
                     while (!ready && initError == null) Thread.sleep(300)
                     val ie = initError
                     if (ie != null) throw Exception("Engine init failed: " + ie)
-                    val info = YoutubeDL.getInstance().getInfo(url)
-                    previewTitle = info.title ?: "Untitled"
-                    previewThumbnail = info.thumbnail ?: ""
-                    previewDuration = info.duration?.toString() ?: ""
+                    synchronized(engineLock) {
+                        val info = YoutubeDL.getInstance().getInfo(url)
+                        previewTitle = info.title ?: "Untitled"
+                        previewThumbnail = info.thumbnail ?: ""
+                        previewDuration = info.duration?.toString() ?: ""
+                    }
                     previewStatus = "done"
                 } catch (e: Throwable) {
                     previewError = (e.message ?: e.toString()).take(220)
@@ -387,7 +399,12 @@ class MainActivity : Activity() {
             val req = YoutubeDLRequest(url)
             req.addOption("--no-mtime")
             req.addOption("--continue")
-            req.addOption("--socket-timeout", "30")
+            req.addOption("--socket-timeout", "20")
+            req.addOption("--no-warnings")
+            req.addOption("--no-check-formats")
+            req.addOption("--retries", "3")
+            req.addOption("--fragment-retries", "3")
+            req.addOption("--concurrent-fragments", "4")
             if (playlist) {
                 req.addOption("-o", job.absolutePath + "/%(playlist_title).60s/%(playlist_index)s - %(title).100s.%(ext)s")
             } else {
@@ -414,13 +431,15 @@ class MainActivity : Activity() {
                 req.addOption("--sub-langs", "en")
             }
 
-            YoutubeDL.getInstance().execute(req, processId) { progress, eta, line ->
-                val pr = progress.toInt()
-                if (pr >= 0) {
-                    percent = pr.coerceIn(0, 100)
-                    code = "downloading"
+            synchronized(engineLock) {
+                YoutubeDL.getInstance().execute(req, processId) { progress, eta, line ->
+                    val pr = progress.toInt()
+                    if (pr >= 0) {
+                        percent = pr.coerceIn(0, 100)
+                        code = "downloading"
+                    }
+                    handleLine(line, eta)
                 }
-                handleLine(line, eta)
             }
 
             code = "processing"
