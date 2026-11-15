@@ -53,6 +53,9 @@ class MainActivity : Activity() {
     @Volatile private var ready = false
     @Volatile private var initError: String? = null
     @Volatile private var updateError = ""
+    @Volatile private var engineUpdateStatus = "idle"
+    @Volatile private var engineUpdateVersion = "?"
+    @Volatile private var engineUpdateInProgress = false
     @Volatile private var previewStatus = "idle"
     @Volatile private var previewTitle = ""
     @Volatile private var previewThumbnail = ""
@@ -85,12 +88,13 @@ class MainActivity : Activity() {
                 YoutubeDL.getInstance().init(applicationContext)
                 FFmpeg.getInstance().init(applicationContext)
                 ready = true
+                engineUpdateVersion = engineVersion()
                 Thread {
                     try {
                         Thread.sleep(30000)
                         if (status == "idle" && previewStatus != "running" && !queueWorkerActive) {
                             synchronized(engineLock) {
-                                if (status == "idle" && previewStatus != "running" && !queueWorkerActive) updateEngine()
+                                if (status == "idle" && previewStatus != "running" && !queueWorkerActive) updateEngine(false)
                             }
                         }
                     } catch (_: InterruptedException) { }
@@ -101,17 +105,46 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    private fun updateEngine() {
-        try {
-            val prefs = getSharedPreferences("engine", MODE_PRIVATE)
-            val now = System.currentTimeMillis()
-            if (now - prefs.getLong("last_update", 0L) > 6 * 60 * 60 * 1000L) {
-                YoutubeDL.getInstance().updateYoutubeDL(applicationContext, YoutubeDL.UpdateChannel.NIGHTLY)
-                prefs.edit().putLong("last_update", now).apply()
-            }
-        } catch (e: Throwable) {
-            updateError = e.message ?: e.toString()
+    private fun updateEngine(force: Boolean) {
+        if (engineUpdateInProgress) return
+        val prefs = getSharedPreferences("engine", MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (!force && now - prefs.getLong("last_update", 0L) <= 6 * 60 * 60 * 1000L) {
+            engineUpdateStatus = "current"
+            engineUpdateVersion = engineVersion()
+            return
         }
+        engineUpdateInProgress = true
+        engineUpdateStatus = "updating"
+        updateError = ""
+        try {
+            val before = engineVersion()
+            YoutubeDL.getInstance().updateYoutubeDL(applicationContext, YoutubeDL.UpdateChannel.NIGHTLY)
+            val after = engineVersion()
+            engineUpdateVersion = after
+            engineUpdateStatus = if (before != after) "updated" else "current"
+            prefs.edit().putLong("last_update", System.currentTimeMillis()).apply()
+        } catch (e: Throwable) {
+            updateError = (e.message ?: e.toString()).take(240)
+            engineUpdateStatus = "failed"
+        } finally {
+            engineUpdateInProgress = false
+        }
+    }
+
+    private fun requestEngineUpdate() {
+        if (!ready) { engineUpdateStatus = "waiting"; return }
+        if (status == "running" || status == "paused" || previewStatus == "running" || queueWorkerActive) {
+            engineUpdateStatus = "busy"
+            return
+        }
+        if (engineUpdateInProgress) return
+        Thread {
+            synchronized(engineLock) {
+                if (status == "idle" && previewStatus != "running" && !queueWorkerActive) updateEngine(true)
+                else engineUpdateStatus = "busy"
+            }
+        }.start()
     }
 
     private fun engineVersion(): String {
@@ -238,6 +271,18 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun listDownloads(): String = getDownloadsJson()
+
+        @JavascriptInterface
+        fun checkEngineUpdate() { requestEngineUpdate() }
+
+        @JavascriptInterface
+        fun engineUpdateInfo(): String {
+            val o = JSONObject()
+            o.put("status", engineUpdateStatus)
+            o.put("version", engineUpdateVersion.ifBlank { engineVersion() })
+            o.put("error", updateError)
+            return o.toString()
+        }
 
         @JavascriptInterface
         fun shareDownload(uri: String, mime: String) {
