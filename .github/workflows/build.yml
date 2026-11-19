@@ -18,12 +18,23 @@ jobs:
         with:
           gradle-version: "8.13"
       - run: gradle assembleRelease
-      - name: Sign APK
+      - name: Sign APK with persistent release key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          BT=$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)
-          keytool -genkeypair -keystore release.jks -storepass shancodex -keypass shancodex -alias shan -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Shan Codex"
-          $ANDROID_HOME/build-tools/$BT/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
-          $ANDROID_HOME/build-tools/$BT/apksigner sign --ks release.jks --ks-pass pass:shancodex --key-pass pass:shancodex --v1-signing-enabled true --v2-signing-enabled true --out AllInOneDownloader.apk aligned.apk
+          set -euo pipefail
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::error::Release signing secrets are missing. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD in GitHub Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release.jks
+          test -s release.jks
+          BT=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)
+          "$ANDROID_HOME/build-tools/$BT/zipalign" -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          "$ANDROID_HOME/build-tools/$BT/apksigner" sign --ks release.jks --ks-pass "pass:$ANDROID_KEYSTORE_PASSWORD" --key-pass "pass:$ANDROID_KEY_PASSWORD" --ks-key-alias "$ANDROID_KEY_ALIAS" --v1-signing-enabled true --v2-signing-enabled true --out AllInOneDownloader.apk aligned.apk
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
