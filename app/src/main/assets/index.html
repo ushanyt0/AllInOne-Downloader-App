@@ -69,7 +69,7 @@ label.c input{width:18px;height:18px;margin:0}
 <button class="tab" id="p_instagram" onclick="setPlat('instagram')">Instagram</button>
 <button class="tab" id="p_tiktok" onclick="setPlat('tiktok')">TikTok</button>
 </div>
-<input type="text" id="url" inputmode="url" onfocus="this.select()" value="https://youtu.be/gwov8azLd2Q?si=0O47vcjsMwJBmP9_">
+<input type="text" id="url" inputmode="url" placeholder="https://..." autocomplete="url">
 <div class="seg">
 <button id="m_video" onclick="setMode('video')" data-k="video"></button>
 <button id="m_audio" onclick="setMode('audio')" data-k="audio"></button>
@@ -178,12 +178,21 @@ function go(){
     show({code:"empty",percent:0,status:"idle",detail:""});
     return;
   }
+  var parsed;
+  try {
+    parsed = new URL(u);
+  } catch(e) {
+    show({code:"empty",percent:0,status:"idle",detail:""});
+    return;
+  }
+  if(parsed.protocol!=="http:" && parsed.protocol!=="https:"){
+    show({code:"empty",percent:0,status:"idle",detail:""});
+    return;
+  }
+  var host=parsed.hostname.toLowerCase();
   var dom=P[plat];
   if(dom.length>0){
-    var ok=false;
-    for(var i=0;i<dom.length;i++){
-      if(low.indexOf(dom[i])>-1){ok=true;}
-    }
+    var ok=dom.some(function(d){return host===d || host.endsWith("."+d);});
     if(!ok){
       show({code:"wrongsite",percent:0,status:"idle",detail:""});
       return;
