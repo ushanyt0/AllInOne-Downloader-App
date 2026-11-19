@@ -58,6 +58,7 @@ class MainActivity : Activity() {
 
     private fun updateEngine() {
         try {
+            updateError = ""
             val prefs = getSharedPreferences("engine", MODE_PRIVATE)
             val now = System.currentTimeMillis()
             if (now - prefs.getLong("last_update", 0L) > 6 * 60 * 60 * 1000L) {
@@ -99,6 +100,7 @@ class MainActivity : Activity() {
 
     inner class Bridge {
         @JavascriptInterface
+        @Synchronized
         fun start(json: String) {
             if (status == "running") return
             status = "running"
@@ -146,6 +148,7 @@ class MainActivity : Activity() {
             val req = YoutubeDLRequest(url)
             req.addOption("--no-mtime")
             req.addOption("--socket-timeout", "30")
+            req.addOption("--no-cache-dir")
             if (playlist) {
                 req.addOption("-o", job.absolutePath + "/%(playlist_title).60s/%(playlist_index)s - %(title).100s.%(ext)s")
             } else {
@@ -158,10 +161,12 @@ class MainActivity : Activity() {
                 req.addOption("--audio-format", "mp3")
                 req.addOption("--audio-quality", quality + "K")
             } else {
+                // Prefer separate best video + audio, but keep fallbacks for
+                // videos where MP4/M4A formats are not available.
                 val fmt = if (quality == "best") {
-                    "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b"
+                    "bv*+ba/b"
                 } else {
-                    "bv*[height<=" + quality + "][ext=mp4]+ba[ext=m4a]/bv*[height<=" + quality + "]+ba/b[height<=" + quality + "]"
+                    "bv*[height<=" + quality + "]+ba/b[height<=" + quality + "]"
                 }
                 req.addOption("-f", fmt)
                 req.addOption("--merge-output-format", "mp4")
@@ -197,7 +202,21 @@ class MainActivity : Activity() {
             var extra = "  [yt-dlp " + engineVersion()
             if (updateError.isNotEmpty()) extra += "; update failed: " + updateError.take(80)
             extra += "]"
-            detail = (e.message ?: e.toString()).takeLast(300) + extra
+            val message = e.message ?: e.toString()
+            val hint = when {
+                message.contains("403", ignoreCase = true) ||
+                    message.contains("429", ignoreCase = true) ||
+                    message.contains("bot", ignoreCase = true) ->
+                    " | YouTube may be rate-limiting this request. Try again later."
+                message.contains("JavaScript runtime", ignoreCase = true) ||
+                    message.contains("js runtime", ignoreCase = true) ->
+                    " | JavaScript runtime unavailable. Check the yt-dlp engine update."
+                message.contains("No such file", ignoreCase = true) ||
+                    message.contains("ffmpeg", ignoreCase = true) ->
+                    " | Media processing failed. Check FFmpeg initialization."
+                else -> ""
+            }
+            detail = (message.takeLast(240) + hint + extra).takeLast(500)
         }
     }
 
@@ -213,14 +232,27 @@ class MainActivity : Activity() {
             else -> "application/octet-stream"
         }
         if (Build.VERSION.SDK_INT >= 29) {
-            val v = ContentValues()
-            v.put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
-            v.put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            v.put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/" + sub)
+            val v = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
+                put(MediaStore.MediaColumns.MIME_TYPE, mime)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/" + sub)
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
             val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v)
-                ?: throw Exception("Cannot save the file")
-            contentResolver.openOutputStream(uri)!!.use { out ->
-                f.inputStream().use { it.copyTo(out) }
+                ?: throw Exception("Cannot create the download file")
+            try {
+                val output = contentResolver.openOutputStream(uri)
+                    ?: throw Exception("Cannot open the download file")
+                output.use { out ->
+                    f.inputStream().use { input -> input.copyTo(out) }
+                }
+                val completed = ContentValues().apply {
+                    put(MediaStore.MediaColumns.IS_PENDING, 0)
+                }
+                contentResolver.update(uri, completed, null, null)
+            } catch (e: Throwable) {
+                contentResolver.delete(uri, null, null)
+                throw e
             }
         } else {
             val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), sub)
